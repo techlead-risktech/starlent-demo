@@ -1,11 +1,11 @@
 import { useParams, useNavigate } from 'react-router-dom';
-import { certificates } from '../../data/mockChats.js';
+import { findCertificateById } from '../../data/mockChats.js';
 import { useToast } from '../../hooks/useToast.js';
 import LearnerLayout from '../../components/layout/LearnerLayout.jsx';
 
 export default function CertificatePage() {
   const {certId}=useParams(); const navigate=useNavigate(); const {toast,showToast}=useToast();
-  const cert=certificates.find(c=>c.id===certId);
+  const cert=findCertificateById(certId);
   if (!cert) return <LearnerLayout topBar={<div className="page__header"><div className="page__title">Chứng chỉ</div></div>}><div className="empty-state"><div className="empty-state__icon">🔍</div><div className="empty-state__title">Không tìm thấy</div></div></LearnerLayout>;
 
   return (

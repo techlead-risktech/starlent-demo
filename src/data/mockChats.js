@@ -61,5 +61,21 @@ export const certificates = [
 
 export function getConversationsForUser(userId) { return conversations.filter(c => c.participants.includes(userId)); }
 export function getNotificationsForUser(userId) { return notifications.filter(n => n.userId === userId); }
-export function getCertificatesForUser(userId) { return certificates.filter(c => c.userId === userId); }
+export function getCertificatesForUser(userId) {
+  const staticCerts = certificates.filter(c => c.userId === userId);
+  try {
+    const ls = JSON.parse(localStorage.getItem('starlent_learning') || '{}');
+    const local = (ls.localCerts || []).filter(c => c.userId === userId);
+    const courseIds = new Set(local.map(c => c.courseId));
+    return [...local, ...staticCerts.filter(c => !courseIds.has(c.courseId))];
+  } catch { return staticCerts; }
+}
+export function findCertificateById(certId) {
+  const all = [...certificates];
+  try {
+    const ls = JSON.parse(localStorage.getItem('starlent_learning') || '{}');
+    all.push(...(ls.localCerts || []));
+  } catch { /* ignore */ }
+  return all.find(c => c.id === certId) || null;
+}
 export function getUnlockedBadges(unlockedBadgeIds = []) { return badges.filter(b => unlockedBadgeIds.includes(b.id) || b.unlockedAt !== null); }

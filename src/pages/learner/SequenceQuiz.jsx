@@ -30,7 +30,7 @@ export default function SequenceQuiz() {
   if (done) return <LearnerLayout topBar={<div className="page__header"><div className="page__title">{content.title}</div></div>}><div style={{textAlign:'center',padding:40}}><div style={{fontSize:64}}>🎉</div><h2 style={{fontSize:24,fontWeight:800,margin:'8px 0'}}>Hoàn thành!</h2><p style={{fontSize:16,color:'var(--color-text-secondary)'}}>Số lần thử: {attempts}</p><button className="btn btn--primary btn--lg btn--full" style={{marginTop:24}} onClick={handleBack}>Quay lại</button></div></LearnerLayout>;
 
   return (
-    <LearnerLayout topBar={<div className="page__header"><div className="page__title">{content.title}</div><div style={{fontSize:13,color:'var(--color-text-muted)'}}>Lần thử: {attempts}</div></div>}>
+    <LearnerLayout topBar={<div className="page__header" style={{display:'flex',alignItems:'center',gap:12}}><button className="btn btn--ghost btn--sm" onClick={handleBack} style={{flexShrink:0}}>← Quay lại</button><div style={{flex:1}}><div className="page__title">{content.title}</div><div style={{fontSize:13,color:'var(--color-text-muted)'}}>Lần thử: {attempts}</div></div></div>}>
       <div style={{padding:16}}>
         <p style={{fontSize:14,color:'var(--color-text-secondary)',marginBottom:16}}>{content.description}</p>
         <div style={{display:'flex',flexDirection:'column',gap:8,marginBottom:20}}>

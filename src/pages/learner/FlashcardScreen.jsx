@@ -128,7 +128,7 @@ export default function FlashcardScreen() {
   }
 
   return (
-    <LearnerLayout topBar={<div className="page__header"><div className="page__title">{content.title}</div><div style={{fontSize:13,color:'var(--color-text-muted)'}}>Thẻ {idx+1}/{content.cards.length}</div></div>}>
+    <LearnerLayout topBar={<div className="page__header" style={{display:'flex',alignItems:'center',gap:12}}><button className="btn btn--ghost btn--sm" onClick={handleBack} style={{flexShrink:0}}>← Quay lại</button><div style={{flex:1}}><div className="page__title">{content.title}</div><div style={{fontSize:13,color:'var(--color-text-muted)'}}>Thẻ {idx+1}/{content.cards.length}</div></div></div>}>
       <div style={{ padding: 16 }}>
         <div className="progress-bar" style={{ marginBottom: 20 }}>
           <div className="progress-bar__fill progress-bar__fill--secondary" style={{ width: `${((idx + 1) / content.cards.length) * 100}%` }} />

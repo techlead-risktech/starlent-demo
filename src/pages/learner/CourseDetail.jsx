@@ -4,6 +4,7 @@ import { courses, getCourseProgress, getUnlockedModules } from '../../data/mockC
 import { getLearningState, completeModule, completeCourse } from '../../utils/auth.js';
 import LearnerLayout from '../../components/layout/LearnerLayout.jsx';
 import { PageSkeleton } from '../../components/common/Skeleton.jsx';
+import Modal from '../../components/common/Modal.jsx';
 
 // Kiểm tra module đã hoàn thành chưa (tất cả item đều done)
 // Hỗ trợ cả itemId (i1) và contentId (fc1) để tương thích dữ liệu cũ
@@ -17,6 +18,8 @@ export default function CourseDetail() {
   const [loading, setLoading] = useState(true);
   const [ls, setLs] = useState(null);
   const [refreshKey, setRefreshKey] = useState(0); // force re-read khi quay lại
+  const [showCongrats, setShowCongrats] = useState(false);
+  const [newCertId, setNewCertId] = useState(null);
 
   // Luôn đọc lại learning state khi vào trang (kể cả navigate back)
   useEffect(()=>{
@@ -36,7 +39,17 @@ export default function CourseDetail() {
           });
           const allModsDone = course.modules.every(mod => isModuleDone(mod, state.completedItems));
           if (allModsDone && !state.completedCourses.includes(courseId)) {
-            completeCourse(courseId);
+            completeCourse(courseId, {
+              courseName: course.title,
+              duration: course.duration,
+              score: 85 + Math.floor(Math.random() * 11),
+            });
+            const fresh = getLearningState();
+            const newCert = fresh.localCerts.find(c => c.courseId === courseId);
+            if (newCert) {
+              setNewCertId(newCert.id);
+              setShowCongrats(true);
+            }
             stateChanged = true;
           }
           if (stateChanged) {
@@ -104,6 +117,20 @@ export default function CourseDetail() {
           </div>
         );
       })}
+
+      {showCongrats && (
+        <Modal open={true} centered onClose={()=>setShowCongrats(false)}>
+          <div style={{textAlign:'center',padding:8}}>
+            <div style={{fontSize:64}}>🎉</div>
+            <h2 style={{fontSize:22,fontWeight:800,marginBottom:8}}>Chúc mừng!</h2>
+            <p style={{fontSize:15,color:'var(--color-text-secondary)',marginBottom:16}}>
+              Bạn đã hoàn thành <strong>{course.title}</strong>.<br/>Chứng chỉ đã được tạo.
+            </p>
+            <button className="btn btn--primary btn--full" style={{marginBottom:8}} onClick={()=>{setShowCongrats(false);navigate(`/learner/certificate/${newCertId}`);}}>🎓 Xem chứng chỉ</button>
+            <button className="btn btn--ghost btn--full" onClick={()=>setShowCongrats(false)}>Để sau</button>
+          </div>
+        </Modal>
+      )}
     </LearnerLayout>
   );
 }

@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { flashcards } from '../../data/mockContent.js';
-import { getLearningState, saveCardReview, completeItem } from '../../utils/auth.js';
+import { saveCardReview, completeItem, getDueCards } from '../../utils/auth.js';
 import { useToast } from '../../hooks/useToast.js';
 import LearnerLayout from '../../components/layout/LearnerLayout.jsx';
 
@@ -11,7 +11,7 @@ export default function DailyReview() {
   const [idx,setIdx]=useState(0); const [flipped,setFlipped]=useState(false);
   const [done,setDone]=useState(false); const [xp,setXp]=useState(0); const [reviewed,setReviewed]=useState(0);
 
-  useEffect(()=>{const t=setTimeout(()=>{const ls=getLearningState();const all=Object.values(flashcards).flatMap(f=>f.cards);const due=all.filter(c=>!ls.reviewedCards[c.id]||ls.reviewedCards[c.id]==='forgot'||ls.reviewedCards[c.id]==='hard');setCards(due.length>0?due:all.slice(0,5));setLoading(false);},300);return ()=>clearTimeout(t);},[]);
+  useEffect(()=>{const t=setTimeout(()=>{const all=Object.values(flashcards).flatMap(f=>f.cards);const due=getDueCards(all);setCards(due.length>0?due.slice(0,15):all.slice(0,5));setLoading(false);},300);return ()=>clearTimeout(t);},[]);
 
   if (loading) return <LearnerLayout topBar={<div className="page__header"><div className="page__title">Ôn tập hàng ngày</div></div>}><div style={{padding:16}}><div className="skeleton skeleton-card"/></div></LearnerLayout>;
   if (done) return <LearnerLayout topBar={<div className="page__header"><div className="page__title">Hoàn tất</div></div>}><div style={{textAlign:'center',padding:40}}><div style={{fontSize:64}}>🔄</div><h2 style={{fontSize:24,fontWeight:800,margin:8}}>Hoàn thành!</h2><p style={{fontSize:16,color:'var(--color-text-secondary)'}}>Đã ôn {reviewed} thẻ</p><p style={{fontSize:20,fontWeight:700,color:'var(--color-primary)',margin:'8px 0 24px'}}>+{xp} XP</p><button className="btn btn--primary btn--lg btn--full" onClick={()=>navigate('/learner/dashboard')}>Về trang chủ</button></div></LearnerLayout>;

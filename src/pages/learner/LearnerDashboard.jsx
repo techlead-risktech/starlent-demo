@@ -2,13 +2,12 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth.jsx';
 import { useOnlineStatus } from '../../hooks/useToast.js';
-import { getLearningState } from '../../utils/auth.js';
+import { getLearningState, getLast7DaysStreak, getDailyProgress, getDueCards, isOnboarded } from '../../utils/auth.js';
 import { courses, getCourseProgress } from '../../data/mockCourses.js';
+import { flashcards } from '../../data/mockContent.js';
 import { getNotificationsForUser } from '../../data/mockChats.js';
-import { isOnboarded } from '../../utils/auth.js';
 import LearnerLayout from '../../components/layout/LearnerLayout.jsx';
 import { SkeletonText, SkeletonCard } from '../../components/common/Skeleton.jsx';
-import Modal from '../../components/common/Modal.jsx';
 
 function Greeting({ name }) {
   const h = new Date().getHours();
@@ -16,6 +15,66 @@ function Greeting({ name }) {
   if (h >= 12 && h < 17) g = 'Chào buổi chiều';
   else if (h >= 17) g = 'Chào buổi tối';
   return <span>{g}, <strong>{name}</strong>!</span>;
+}
+
+const DAY_LABELS = ['T2','T3','T4','T5','T6','T7','CN'];
+function StreakStrip({ days }) {
+  return (
+    <div className="card" style={{padding:14,marginBottom:20}}>
+      <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:10}}>
+        <div style={{fontWeight:700,fontSize:14}}>📅 7 ngày gần nhất</div>
+        <div style={{fontSize:12,color:'var(--color-text-muted)'}}>{days.filter(d=>d.studied).length}/7 ngày học</div>
+      </div>
+      <div className="streak-strip">
+        {days.map((d,i)=>{
+          const dt = new Date(d.date+'T00:00:00');
+          const dow = (dt.getDay()+6)%7;
+          const isToday = i === days.length-1;
+          return (
+            <div key={d.date} style={{textAlign:'center'}}>
+              <div style={{fontSize:10,color:'var(--color-text-muted)',marginBottom:4}}>{DAY_LABELS[dow]}</div>
+              <div className="streak-dot" style={{
+                background: d.studied?'var(--color-primary)':'var(--color-divider)',
+                color: d.studied?'#fff':'var(--color-text-muted)',
+                border: isToday?'2px solid var(--color-secondary)':'none',
+              }}>
+                {d.studied?'🔥':dt.getDate()}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function DailyGoalCard({ done, goal, onPick }) {
+  const pct = Math.min(100, Math.round((done/goal)*100));
+  const reached = done >= goal;
+  return (
+    <div className="card" style={{padding:14,marginBottom:20,background:reached?'linear-gradient(135deg,#ECFDF5,#D1FAE5)':'linear-gradient(135deg,#EFF6FF,#DBEAFE)'}}>
+      <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:8}}>
+        <div>
+          <div style={{fontWeight:700,fontSize:15}}>🎯 Mục tiêu hôm nay</div>
+          <div style={{fontSize:13,color:'var(--color-text-secondary)',marginTop:2}}>
+            {reached?'🎉 Đạt mục tiêu! Tiếp tục phát huy.':`${done}/${goal} bài đã hoàn thành`}
+          </div>
+        </div>
+        <div style={{fontSize:24,fontWeight:800,color:reached?'var(--color-success)':'var(--color-secondary)'}}>{pct}%</div>
+      </div>
+      <div className="progress-bar"><div className="progress-bar__fill" style={{width:`${pct}%`,background:reached?'var(--color-success)':'var(--color-secondary)'}}/></div>
+      {!reached && <button className="btn btn--primary btn--full btn--sm" style={{marginTop:10}} onClick={onPick}>⚡ Học nhanh 5 phút</button>}
+    </div>
+  );
+}
+
+function pickQuickFlashcardId() {
+  const allCards = Object.values(flashcards).flatMap(f=>f.cards);
+  const due = getDueCards(allCards);
+  const pool = due.length>0?due:allCards;
+  const c = pool[Math.floor(Math.random()*pool.length)];
+  const fc = Object.values(flashcards).find(f=>f.cards.some(x=>x.id===c.id));
+  return fc?.id;
 }
 
 export default function LearnerDashboard() {
@@ -30,6 +89,12 @@ export default function LearnerDashboard() {
     const t = setTimeout(() => { setLs(getLearningState()); setLoading(false); }, 600);
     return () => clearTimeout(t);
   }, [navigate]);
+
+  const handleQuickStart = () => {
+    const fcId = pickQuickFlashcardId();
+    if (fcId) navigate(`/learner/flashcard/${fcId}`);
+    else navigate('/learner/daily-review');
+  };
 
   if (loading) {
     return (
@@ -53,6 +118,10 @@ export default function LearnerDashboard() {
   const userNotis = getNotificationsForUser(user?.id).filter(n => !n.read);
   const inProgress = courses.filter(c => { const p = getCourseProgress(c, ls?.completedItems||[]); return p > 0 && p < 100; });
   const required = courses.filter(c => c.required);
+  const days = getLast7DaysStreak();
+  const dailyG = getDailyProgress();
+  const allCards = Object.values(flashcards).flatMap(f=>f.cards);
+  const dueCount = getDueCards(allCards).length;
 
   return (
     <LearnerLayout
@@ -71,15 +140,16 @@ export default function LearnerDashboard() {
         </div>
       }
     >
-      {/* Stat cards */}
+      <DailyGoalCard done={dailyG.done} goal={dailyG.goal} onPick={handleQuickStart}/>
+      <StreakStrip days={days}/>
+
       <div className="grid-4" style={{marginBottom:20}}>
         <div className="stat-card"><div className="stat-card__label">🔥 Streak</div><div className="stat-card__value">{streak} <span style={{fontSize:14}}>ngày</span></div></div>
         <div className="stat-card"><div className="stat-card__label">⭐ Tổng XP</div><div className="stat-card__value">{xp.toLocaleString()}</div><div className="progress-bar" style={{marginTop:8}}><div className="progress-bar__fill" style={{width:`${(xp%500)/5}%`}}/></div><div style={{fontSize:10,color:'var(--color-text-muted)',marginTop:4}}>Còn {xpToNext} XP nữa lên cấp {level+1}</div></div>
         <div className="stat-card"><div className="stat-card__label">🎯 Cấp độ</div><div className="stat-card__value">{level}</div></div>
-        <div className="stat-card"><div className="stat-card__label">📝 Hôm nay</div><div className="stat-card__value">{ls?.completedItems?.length||0} <span style={{fontSize:14}}>bài</span></div></div>
+        <div className="stat-card"><div className="stat-card__label">📝 Hôm nay</div><div className="stat-card__value">{dailyG.done} <span style={{fontSize:14}}>bài</span></div></div>
       </div>
 
-      {/* Continue learning */}
       {inProgress.length > 0 && (
         <div style={{marginBottom:20}}>
           <h3 style={{fontSize:18,fontWeight:700,marginBottom:12}}>📖 Tiếp tục học</h3>
@@ -87,7 +157,7 @@ export default function LearnerDashboard() {
             {inProgress.map(course => {
               const prog = getCourseProgress(course, ls?.completedItems||[]);
               return (
-                <div key={course.id} className="card card--hoverable" style={{minWidth:260,flexShrink:0}} onClick={()=>navigate(`/learner/course/${course.id}`)}>
+                <div key={course.id} className="card card--hoverable course-mini-card" style={{minWidth:260,flexShrink:0}} onClick={()=>navigate(`/learner/course/${course.id}`)}>
                   <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:8}}>
                     <span style={{fontSize:28}}>📖</span>
                     <div><div style={{fontWeight:700,fontSize:14}}>{course.title}</div><div style={{fontSize:12,color:'var(--color-text-muted)'}}>{course.moduleCount} module</div></div>
@@ -101,7 +171,6 @@ export default function LearnerDashboard() {
         </div>
       )}
 
-      {/* Required courses */}
       {required.length > 0 && (
         <div style={{marginBottom:20}}>
           <h3 style={{fontSize:18,fontWeight:700,marginBottom:12}}>🎯 Khoá học bắt buộc</h3>
@@ -120,23 +189,34 @@ export default function LearnerDashboard() {
         </div>
       )}
 
-      {/* Daily review */}
       <div style={{marginBottom:20}}>
         <div className="card" style={{background:'linear-gradient(135deg,#FFF7ED,#FFF0EB)'}}>
-          <div style={{display:'flex',alignItems:'center',justifyContent:'space-between'}}>
-            <div style={{display:'flex',alignItems:'center',gap:12}}><span style={{fontSize:36}}>🔄</span><div><div style={{fontWeight:700,fontSize:16}}>Ôn tập hàng ngày</div><div style={{fontSize:13,color:'var(--color-text-secondary)'}}>{Object.keys(ls?.reviewedCards||{}).length>0?`Bạn đã ôn ${Object.keys(ls?.reviewedCards||{}).length} thẻ`:'Bắt đầu ôn tập để ghi nhớ lâu hơn'}</div></div></div>
+          <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',gap:12,flexWrap:'wrap'}}>
+            <div style={{display:'flex',alignItems:'center',gap:12,flex:1,minWidth:200}}>
+              <span style={{fontSize:36}}>🔄</span>
+              <div>
+                <div style={{fontWeight:700,fontSize:16,display:'flex',alignItems:'center',gap:8,flexWrap:'wrap'}}>
+                  Ôn tập hàng ngày
+                  {dueCount>0 && <span className="badge badge--danger">{dueCount} đến hạn</span>}
+                </div>
+                <div style={{fontSize:13,color:'var(--color-text-secondary)'}}>
+                  {dueCount>0?`Có ${dueCount} thẻ cần ôn hôm nay`:'Không có thẻ đến hạn. Học tiếp để tích lũy thẻ ôn tập!'}
+                </div>
+              </div>
+            </div>
             <button className="btn btn--primary" onClick={()=>navigate('/learner/daily-review')}>Ôn tập</button>
           </div>
         </div>
       </div>
 
-      {/* Notifications */}
       {userNotis.length > 0 && (
         <div style={{marginBottom:20}}>
           <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:8}}><h3 style={{fontSize:16,fontWeight:700}}>🔔 Thông báo</h3><button style={{fontSize:13,color:'var(--color-primary)',fontWeight:600}} onClick={()=>navigate('/learner/notifications')}>Xem tất cả</button></div>
           {userNotis.slice(0,3).map(n=><div key={n.id} className="card" style={{marginBottom:8,padding:12}}><div style={{fontWeight:600,fontSize:14}}>{n.title}</div><div style={{fontSize:13,color:'var(--color-text-secondary)'}}>{n.body}</div></div>)}
         </div>
       )}
+
+      <button aria-label="Học nhanh 5 phút" onClick={handleQuickStart} className="fab-quick">⚡</button>
     </LearnerLayout>
   );
 }

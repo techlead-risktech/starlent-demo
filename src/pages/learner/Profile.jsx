@@ -25,6 +25,11 @@ export default function Profile() {
         </div>
         {unlocked.length>0&&<div style={{marginBottom:24}}><h3 style={{fontSize:16,fontWeight:700,marginBottom:12}}>🏅 Huy hiệu ({unlocked.length})</h3><div style={{display:'flex',gap:12,flexWrap:'wrap'}}>{unlocked.map(b=><div key={b.id} className="card" style={{padding:12,textAlign:'center',minWidth:80}}><div style={{fontSize:28}}>{b.icon}</div><div style={{fontSize:11,fontWeight:600}}>{b.name}</div></div>)}</div></div>}
         {certs.length>0&&<div style={{marginBottom:24}}><h3 style={{fontSize:16,fontWeight:700,marginBottom:12}}>🎓 Chứng chỉ</h3>{certs.map(c=><div key={c.id} className="card" style={{marginBottom:8}} onClick={()=>navigate(`/learner/certificate/${c.id}`)}><div style={{fontWeight:700,fontSize:14}}>{c.courseName}</div><div style={{fontSize:12,color:'var(--color-text-muted)'}}>{new Date(c.completionDate).toLocaleDateString('vi-VN')} · {c.score} điểm</div></div>)}</div>}
+        <div className="grid-2" style={{marginBottom:12}}>
+          <button className="btn btn--secondary btn--full" onClick={()=>navigate('/learner/leaderboard')}>🏆 Bảng xếp hạng</button>
+          <button className="btn btn--secondary btn--full" onClick={()=>navigate('/learner/offline')}>📥 Ngoại tuyến</button>
+        </div>
+        <button className="btn btn--secondary btn--full" style={{marginBottom:8}} onClick={()=>navigate('/learner/explore')}>🔍 Khám phá thư viện</button>
         <button className="btn btn--secondary btn--full" style={{marginBottom:8}} onClick={()=>navigate('/learner/settings')}>⚙️ Cài đặt</button>
         <button className="btn btn--ghost btn--full" style={{color:'var(--color-danger)'}} onClick={()=>{logout();navigate('/login');}}>🚪 Đăng xuất</button>
       </div>
