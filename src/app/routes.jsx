@@ -35,6 +35,7 @@ import TrainerDashboard from '../pages/trainer/TrainerDashboard.jsx';
 
 // Editor
 import EditorDashboard from '../pages/editor/EditorDashboard.jsx';
+import EditorCourseBuilderPage from '../pages/editor/EditorCourseBuilderPage.jsx';
 
 // Manager
 import ManagerDashboard from '../pages/manager/ManagerDashboard.jsx';
@@ -42,6 +43,7 @@ import DepartmentView from '../pages/manager/DepartmentView.jsx';
 
 // Admin
 import AdminDashboard from '../pages/admin/AdminDashboard.jsx';
+import AdminCourseBuilderPage from '../pages/admin/AdminCourseBuilderPage.jsx';
 
 function RedirectByRole() {
   const { user } = useAuth();
@@ -96,6 +98,7 @@ export default function AppRoutes() {
 
       {/* Editor */}
       <Route path="/editor/dashboard" element={<ProtectedRoute roles={['editor']}><EditorDashboard /></ProtectedRoute>} />
+      <Route path="/editor/courses/:courseId/builder" element={<ProtectedRoute roles={['editor']}><EditorCourseBuilderPage /></ProtectedRoute>} />
 
       {/* Manager */}
       <Route path="/manager/dashboard" element={<ProtectedRoute roles={['learning_manager']}><ManagerDashboard /></ProtectedRoute>} />
@@ -103,6 +106,7 @@ export default function AppRoutes() {
 
       {/* Admin */}
       <Route path="/admin/dashboard" element={<ProtectedRoute roles={['admin']}><AdminDashboard /></ProtectedRoute>} />
+      <Route path="/admin/courses/:courseId/builder" element={<ProtectedRoute roles={['admin']}><AdminCourseBuilderPage /></ProtectedRoute>} />
 
       <Route path="*" element={<RedirectByRole />} />
     </Routes>

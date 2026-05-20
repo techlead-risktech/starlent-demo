@@ -1,5 +1,5 @@
 /**
- * Mock Users — Tài khoản demo cho tất cả các vai trò
+ * Mock Users - Tài khoản demo cho tất cả các vai trò
  * Vai trò: learner, trainer, editor, learning_manager, dept_manager, admin
  */
 
