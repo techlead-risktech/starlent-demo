@@ -16,8 +16,11 @@ import FlashcardScreen from '../pages/learner/FlashcardScreen.jsx';
 import VideoLesson from '../pages/learner/VideoLesson.jsx';
 import AudioLesson from '../pages/learner/AudioLesson.jsx';
 import QuizScreen from '../pages/learner/QuizScreen.jsx';
-import SequenceQuiz from '../pages/learner/SequenceQuiz.jsx';
 import RoleplayScreen from '../pages/learner/RoleplayScreen.jsx';
+import ReadingLesson from '../pages/learner/ReadingLesson.jsx';
+import AssignmentLesson from '../pages/learner/AssignmentLesson.jsx';
+import SurveyLesson from '../pages/learner/SurveyLesson.jsx';
+import LiveSessionLesson from '../pages/learner/LiveSessionLesson.jsx';
 import QuizResult from '../pages/learner/QuizResult.jsx';
 import DailyReview from '../pages/learner/DailyReview.jsx';
 import SearchResult from '../pages/learner/SearchResult.jsx';
@@ -79,8 +82,11 @@ export default function AppRoutes() {
       <Route path="/learner/video/:contentId" element={<ProtectedRoute roles={['learner']}><VideoLesson /></ProtectedRoute>} />
       <Route path="/learner/audio/:contentId" element={<ProtectedRoute roles={['learner']}><AudioLesson /></ProtectedRoute>} />
       <Route path="/learner/quiz/:contentId" element={<ProtectedRoute roles={['learner']}><QuizScreen /></ProtectedRoute>} />
-      <Route path="/learner/sequence/:contentId" element={<ProtectedRoute roles={['learner']}><SequenceQuiz /></ProtectedRoute>} />
       <Route path="/learner/roleplay/:contentId" element={<ProtectedRoute roles={['learner']}><RoleplayScreen /></ProtectedRoute>} />
+      <Route path="/learner/reading/:contentId" element={<ProtectedRoute roles={['learner']}><ReadingLesson /></ProtectedRoute>} />
+      <Route path="/learner/assignment/:contentId" element={<ProtectedRoute roles={['learner']}><AssignmentLesson /></ProtectedRoute>} />
+      <Route path="/learner/survey/:contentId" element={<ProtectedRoute roles={['learner']}><SurveyLesson /></ProtectedRoute>} />
+      <Route path="/learner/live-session/:contentId" element={<ProtectedRoute roles={['learner']}><LiveSessionLesson /></ProtectedRoute>} />
       <Route path="/learner/quiz-result" element={<ProtectedRoute roles={['learner']}><QuizResult /></ProtectedRoute>} />
       <Route path="/learner/daily-review" element={<ProtectedRoute roles={['learner']}><DailyReview /></ProtectedRoute>} />
       <Route path="/learner/search" element={<ProtectedRoute roles={['learner']}><SearchResult /></ProtectedRoute>} />

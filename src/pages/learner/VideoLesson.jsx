@@ -96,7 +96,7 @@ export default function VideoLesson() {
     setProgress(100);
     setDone(true);
     if (progressTimerRef.current) clearTimeout(progressTimerRef.current);
-    showToast(`✅ Đã hoàn thành video! +${earnedXp} XP`);
+    showToast(`✅ Đã hoàn thành video! +${earnedXp} điểm`);
   };
 
   useEffect(() => {
@@ -184,7 +184,7 @@ export default function VideoLesson() {
           <div style={{ textAlign: 'center', padding: 20 }}>
             <div style={{ fontSize: 36 }}>🎉</div>
             <p style={{ fontSize: 16, fontWeight: 600, color: 'var(--color-success)' }}>✅ Bài học đã hoàn thành!</p>
-            <p style={{ fontSize: 14, color: 'var(--color-text-secondary)', margin: '4px 0' }}>+{xp} XP</p>
+            <p style={{ fontSize: 14, color: 'var(--color-text-secondary)', margin: '4px 0' }}>+{xp} điểm</p>
             <button className="btn btn--primary" style={{ marginTop: 12 }} onClick={handleBack}>
               {courseId ? '← Về khoá học' : 'Quay lại'}
             </button>

@@ -61,7 +61,7 @@ export default function AudioLesson() {
       completeItem(resolvedItemId, earnedXp);
     }
     setDone(true);
-    showToast(`✅ Hoàn thành! +${earnedXp} XP`);
+    showToast(`✅ Hoàn thành! +${earnedXp} điểm`);
   };
 
   if (!content) return <LearnerLayout topBar={<div className="page__header"><div className="page__title">Đang tải...</div></div>}><div className="empty-state">Đang tải...</div></LearnerLayout>;

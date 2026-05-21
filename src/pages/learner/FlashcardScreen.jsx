@@ -89,7 +89,7 @@ export default function FlashcardScreen() {
       });
     }
     setXp(earnedXp);
-    showToast(`✅ ${totalCorrect}/${totalCards} đúng! +${earnedXp} XP`);
+    showToast(`✅ ${totalCorrect}/${totalCards} đúng! +${earnedXp} điểm`);
   };
 
   const handleNext = async () => {
@@ -115,7 +115,7 @@ export default function FlashcardScreen() {
           <div className="progress-bar" style={{ maxWidth: 280, margin: '12px auto' }}>
             <div className="progress-bar__fill" style={{ width: `${percent}%`, background: percent >= 70 ? 'var(--color-success)' : 'var(--color-warning)' }} />
           </div>
-          <p style={{ fontSize: 20, fontWeight: 700, color: 'var(--color-primary)', margin: '8px 0 24px' }}>+{xp} XP</p>
+          <p style={{ fontSize: 20, fontWeight: 700, color: 'var(--color-primary)', margin: '8px 0 24px' }}>+{xp} điểm</p>
           <button className="btn btn--primary btn--lg btn--full" onClick={handleBack}>
             {courseId ? '← Về khoá học' : 'Quay lại'}
           </button>

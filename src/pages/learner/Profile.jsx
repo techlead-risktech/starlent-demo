@@ -63,8 +63,8 @@ export default function Profile() {
               <span className="badge badge--primary">Cấp {stats.level || 1}</span>
             </div>
             <div className="grid-3" style={{ marginBottom: 24 }}>
-              <div className="stat-card"><div className="stat-card__label">🔥 Streak</div><div className="stat-card__value">{stats.streak || 0}</div></div>
-              <div className="stat-card"><div className="stat-card__label">⭐ XP</div><div className="stat-card__value">{(stats.xp || 0).toLocaleString()}</div></div>
+              <div className="stat-card"><div className="stat-card__label">🔥 Số ngày học liên tiếp</div><div className="stat-card__value">{stats.streak || 0}</div></div>
+              <div className="stat-card"><div className="stat-card__label">⭐ Tổng điểm kinh nghiệm</div><div className="stat-card__value">{(stats.xp || 0).toLocaleString()}</div></div>
               <div className="stat-card"><div className="stat-card__label">📚 Khoá học</div><div className="stat-card__value">{stats.completedCourses || 0}</div></div>
             </div>
             {unlocked.length > 0 && <div style={{ marginBottom: 24 }}><h3 style={{ fontSize: 16, fontWeight: 700, marginBottom: 12 }}>🏅 Huy hiệu ({unlocked.length})</h3><div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>{unlocked.map((b) => <div key={b.id} className="card" style={{ padding: 12, textAlign: 'center', minWidth: 80 }}><div style={{ fontSize: 28 }}>{b.icon}</div><div style={{ fontSize: 11, fontWeight: 600 }}>{b.name}</div></div>)}</div></div>}

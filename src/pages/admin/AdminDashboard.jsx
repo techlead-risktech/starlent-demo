@@ -1,4 +1,4 @@
-﻿import { useEffect, useState } from 'react';
+﻿import { useEffect, useRef, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import AdminLayout from '../../components/layout/AdminLayout.jsx';
 import Modal from '../../components/common/Modal.jsx';
@@ -19,6 +19,9 @@ import {
 import { createUser } from '../../api/services/userManagement.js';
 import { createCourseByScope } from '../../api/services/courseManagement.js';
 import { getAdminReportingDashboard } from '../../api/services/reporting.js';
+
+const STATE_SYNC_EVENT = 'starlent:state-sync';
+const STATE_SYNC_KEY = 'starlent_state_sync_v1';
 
 const ROLES = [
   { value: 'learner', label: 'Học viên' },
@@ -72,6 +75,8 @@ export default function AdminDashboard() {
   });
   const [showUserModal, setShowUserModal] = useState(false);
   const [showCourseModal, setShowCourseModal] = useState(false);
+  const [reloadTick, setReloadTick] = useState(0);
+  const lastSyncAtRef = useRef(0);
 
   const changeTab = (nextTab) => {
     const next = new URLSearchParams(params);
@@ -109,6 +114,33 @@ export default function AdminDashboard() {
     }
     load();
     return () => { mounted = false; };
+  }, [reloadTick]);
+
+  useEffect(() => {
+    const triggerSync = () => {
+      const now = Date.now();
+      if (now - lastSyncAtRef.current < 800) return;
+      lastSyncAtRef.current = now;
+      setReloadTick((value) => value + 1);
+    };
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') triggerSync();
+    };
+    const handleStorageSync = (event) => {
+      if (event.key === STATE_SYNC_KEY) triggerSync();
+    };
+
+    window.addEventListener('focus', triggerSync);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener(STATE_SYNC_EVENT, triggerSync);
+    window.addEventListener('storage', handleStorageSync);
+
+    return () => {
+      window.removeEventListener('focus', triggerSync);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener(STATE_SYNC_EVENT, triggerSync);
+      window.removeEventListener('storage', handleStorageSync);
+    };
   }, []);
 
   const handleCreateUser = async (form) => {

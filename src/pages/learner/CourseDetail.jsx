@@ -85,7 +85,19 @@ export default function CourseDetail() {
   const unlocked = getUnlockedModules(course, ls?.completedModules || []);
 
   const goToItem = (item, moduleId) => {
-    const base = { flashcard: 'flashcard', video: 'video', audio: 'audio', quiz_mc: 'quiz', quiz_sequence: 'sequence', roleplay: 'roleplay' };
+    const base = {
+      flashcard: 'flashcard',
+      video: 'video',
+      audio: 'audio',
+      quiz: 'quiz',
+      quiz_mc: 'quiz',
+      quiz_sequence: 'quiz',
+      roleplay: 'roleplay',
+      lesson_reading: 'reading',
+      assignment: 'assignment',
+      survey: 'survey',
+      live_session: 'live-session',
+    };
     const type = base[item.type] || 'flashcard';
     navigate(`/learner/${type}/${item.contentId}?itemId=${item.id}&moduleId=${moduleId}&courseId=${course.id}`);
   };

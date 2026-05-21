@@ -1,7 +1,17 @@
 ﻿import { http, HttpResponse } from 'msw';
 import { users, ROLE_LABELS } from '../../data/mockUsers.js';
 import { courses } from '../../data/mockCourses.js';
-import { audios, flashcards, quizzes, roleplays, sequenceQuizzes, videos } from '../../data/mockContent.js';
+import {
+  assignmentsCatalog,
+  audios,
+  flashcards,
+  liveSessions,
+  quizzes,
+  readingLessons,
+  roleplays,
+  surveys,
+  videos,
+} from '../../data/mockContent.js';
 import {
   auditLogs,
   courseProgressReport,
@@ -21,22 +31,38 @@ const EDITOR_ROLES = ['editor', 'admin'];
 const TRAINER_ROLES = ['trainer', 'admin'];
 const LEARNING_MANAGER_ROLES = ['learning_manager', 'admin'];
 const DEPT_MANAGER_ROLES = ['dept_manager', 'admin'];
-const COURSE_ITEM_TYPES = new Set(['flashcard', 'video', 'audio', 'quiz_mc', 'quiz_sequence', 'roleplay']);
+const COURSE_ITEM_TYPES = new Set([
+  'flashcard',
+  'video',
+  'audio',
+  'quiz',
+  'roleplay',
+  'lesson_reading',
+  'assignment',
+  'survey',
+  'live_session',
+]);
 const CONTENT_TYPE_MAP = {
   flashcard: flashcards,
   video: videos,
   audio: audios,
-  quiz_mc: quizzes,
-  quiz_sequence: sequenceQuizzes,
+  quiz: quizzes,
   roleplay: roleplays,
+  lesson_reading: readingLessons,
+  assignment: assignmentsCatalog,
+  survey: surveys,
+  live_session: liveSessions,
 };
 const CONTENT_ID_PREFIX_MAP = {
   flashcard: 'fc',
   video: 'vd',
   audio: 'ad',
-  quiz_mc: 'qz',
-  quiz_sequence: 'qs',
+  quiz: 'qz',
   roleplay: 'rp',
+  lesson_reading: 'rd',
+  assignment: 'as',
+  survey: 'sv',
+  live_session: 'ls',
 };
 
 function nextId(prefix) {
@@ -72,14 +98,29 @@ function contentCatalog() {
     flashcard: mapEntries(flashcards),
     video: mapEntries(videos),
     audio: mapEntries(audios),
-    quiz_mc: mapEntries(quizzes),
-    quiz_sequence: mapEntries(sequenceQuizzes),
+    quiz: mapEntries(quizzes),
     roleplay: mapEntries(roleplays),
+    lesson_reading: mapEntries(readingLessons),
+    assignment: mapEntries(assignmentsCatalog),
+    survey: mapEntries(surveys),
+    live_session: mapEntries(liveSessions),
   };
 }
 
 function resolveContentStore(type) {
   return CONTENT_TYPE_MAP[type] || null;
+}
+
+function resolveContentRecord(type, contentId) {
+  if (type === 'quiz') {
+    if (quizzes[contentId]) return { store: quizzes, content: quizzes[contentId], normalizedType: 'quiz' };
+    return null;
+  }
+  const store = resolveContentStore(type);
+  if (!store) return null;
+  const content = store[contentId];
+  if (!content) return null;
+  return { store, content, normalizedType: type };
 }
 
 function nextContentId(type, store) {
@@ -118,20 +159,28 @@ function contentDefaultPayloadByType(type, id, title) {
         duration: 0,
         transcript: '',
       };
-    case 'quiz_mc':
+    case 'quiz':
       return {
         id,
         title,
         type: 'multiple_choice',
+        passScore: 70,
+        attemptLimit: 3,
         timeLimit: 300,
-        questions: [],
-      };
-    case 'quiz_sequence':
-      return {
-        id,
-        title,
-        description: '',
-        items: [],
+        availableFrom: null,
+        dueAt: null,
+        tags: [],
+        skills: [],
+        estimatedDuration: 10,
+        difficulty: 'beginner',
+        questions: [{
+          id: 'q1',
+          questionType: 'single_choice',
+          question: '',
+          options: ['', '', '', ''],
+          correctIndex: 0,
+          explanation: '',
+        }],
       };
     case 'roleplay':
       return {
@@ -141,6 +190,40 @@ function contentDefaultPayloadByType(type, id, title) {
         suggestedResponse: '',
         tips: [],
       };
+    case 'lesson_reading':
+      return {
+        id,
+        title,
+        body: '',
+        references: [],
+        attachments: [],
+      };
+    case 'assignment':
+      return {
+        id,
+        title,
+        instruction: '',
+        submissionType: 'text',
+        rubric: '',
+        maxScore: 100,
+        dueAt: null,
+      };
+    case 'survey':
+      return {
+        id,
+        title,
+        questions: [],
+      };
+    case 'live_session':
+      return {
+        id,
+        title,
+        meetingUrl: '',
+        startAt: null,
+        endAt: null,
+        host: '',
+        notes: '',
+      };
     default:
       return {
         id,
@@ -149,9 +232,50 @@ function contentDefaultPayloadByType(type, id, title) {
   }
 }
 
+function normalizeQuizMcData(data) {
+  const questions = Array.isArray(data?.questions) ? data.questions : [];
+  return {
+    ...data,
+    type: 'multiple_choice',
+    passScore: Math.min(100, Math.max(0, Number(data?.passScore ?? 70))),
+    attemptLimit: Math.max(1, Number(data?.attemptLimit || 3)),
+    timeLimit: Math.max(30, Number(data?.timeLimit || 300)),
+    availableFrom: data?.availableFrom || null,
+    dueAt: data?.dueAt || null,
+    tags: Array.isArray(data?.tags) ? data.tags.map((x) => String(x)) : [],
+    skills: Array.isArray(data?.skills) ? data.skills.map((x) => String(x)) : [],
+    estimatedDuration: Math.max(0, Number(data?.estimatedDuration || 10)),
+    difficulty: String(data?.difficulty || 'beginner'),
+    questions: questions.map((question, idx) => ({
+      id: String(question?.id || `q${idx + 1}`),
+      questionType: String(question?.questionType || 'single_choice'),
+      question: String(question?.question || ''),
+      options: [0, 1, 2, 3].map((i) => String((question?.options || [])[i] || '')),
+      correctIndex: Math.min(3, Math.max(0, Number(question?.correctIndex || 0))),
+      correctIndices: Array.isArray(question?.correctIndices)
+        ? question.correctIndices.map((x) => Math.min(3, Math.max(0, Number(x || 0)))).filter((x, i, arr) => arr.indexOf(x) === i)
+        : [],
+      explanation: String(question?.explanation || ''),
+      prompt: String(question?.prompt || question?.question || ''),
+      items: Array.isArray(question?.items) ? question.items.map((item, idx2) => ({
+        id: String(item?.id || `s${idx2 + 1}`),
+        text: String(item?.text || ''),
+      })) : [],
+      correctOrder: Array.isArray(question?.correctOrder) ? question.correctOrder.map((item) => String(item)) : [],
+      sampleAnswer: String(question?.sampleAnswer || ''),
+    })),
+  };
+}
+
+function normalizeContentPatch(type, patch) {
+  if (type === 'quiz') return normalizeQuizMcData(patch || {});
+  return patch || {};
+}
+
 function isContentInUse(type, contentId) {
+  const matchTypes = new Set([type]);
   return courses.some((course) => (course.modules || []).some((module) => (module.items || []).some((item) => (
-    item.type === type && item.contentId === contentId
+    matchTypes.has(item.type) && item.contentId === contentId
   ))));
 }
 
@@ -188,6 +312,12 @@ function findModuleById(course, moduleId) {
 
 function findItemIndex(module, itemId) {
   return (module.items || []).findIndex((item) => item.id === itemId);
+}
+
+function normalizeCourseItemType(type) {
+  if (type === 'quiz_mc' || type === 'quiz_sequence') return 'quiz';
+  if (type === 'reading') return 'lesson_reading';
+  return type;
 }
 
 function reorderByIds(items, ids) {
@@ -460,9 +590,8 @@ export const managementHandlers = [
     const { error } = requireRoleUser(getCurrentUser, EDITOR_ROLES);
     if (error) return error;
     const type = String(params.type || '');
-    const store = resolveContentStore(type);
-    if (!store) return jsonError(404, 'CONTENT_TYPE_NOT_FOUND', 'Content type not found.');
-    const items = Object.values(store).map((content) => ({ id: content.id, title: content.title || content.id }));
+    if (!contentCatalog()[type]) return jsonError(404, 'CONTENT_TYPE_NOT_FOUND', 'Content type not found.');
+    const items = contentCatalog()[type] || [];
     return HttpResponse.json({ type, items });
   }),
 
@@ -472,10 +601,9 @@ export const managementHandlers = [
     if (error) return error;
     const type = String(params.type || '');
     const contentId = String(params.contentId || '');
-    const store = resolveContentStore(type);
-    if (!store) return jsonError(404, 'CONTENT_TYPE_NOT_FOUND', 'Content type not found.');
-    const content = store[contentId];
-    if (!content) return jsonError(404, 'CONTENT_NOT_FOUND', 'Content not found.');
+    const resolved = resolveContentRecord(type, contentId);
+    if (!resolved) return jsonError(404, 'CONTENT_NOT_FOUND', 'Content not found.');
+    const { content } = resolved;
     return HttpResponse.json({ type, content });
   }),
 
@@ -492,12 +620,13 @@ export const managementHandlers = [
 
     const forcedId = String(body?.id || '').trim();
     const contentId = forcedId || nextContentId(type, store);
-    if (store[contentId]) return jsonError(409, 'CONTENT_EXISTS', 'Content id already exists.');
+    if (resolveContentRecord(type, contentId)) return jsonError(409, 'CONTENT_EXISTS', 'Content id already exists.');
 
     const patch = body?.data && typeof body.data === 'object' ? body.data : {};
+    const normalizedPatch = normalizeContentPatch(type, patch);
     const created = {
       ...contentDefaultPayloadByType(type, contentId, title),
-      ...patch,
+      ...normalizedPatch,
       id: contentId,
       title,
     };
@@ -514,19 +643,19 @@ export const managementHandlers = [
     if (error) return error;
     const type = String(params.type || '');
     const contentId = String(params.contentId || '');
-    const store = resolveContentStore(type);
-    if (!store) return jsonError(404, 'CONTENT_TYPE_NOT_FOUND', 'Content type not found.');
-    const current = store[contentId];
-    if (!current) return jsonError(404, 'CONTENT_NOT_FOUND', 'Content not found.');
+    const resolved = resolveContentRecord(type, contentId);
+    if (!resolved) return jsonError(404, 'CONTENT_NOT_FOUND', 'Content not found.');
+    const { store, content: current } = resolved;
 
     const body = await request.json().catch(() => null);
     const title = body?.title?.trim();
     if (!title) return jsonError(422, 'VALIDATION_FAILED', 'title is required.');
 
     const patch = body?.data && typeof body.data === 'object' ? body.data : {};
+    const normalizedPatch = normalizeContentPatch(type, patch);
     store[contentId] = {
       ...current,
-      ...patch,
+      ...normalizedPatch,
       id: contentId,
       title,
     };
@@ -542,14 +671,13 @@ export const managementHandlers = [
     if (error) return error;
     const type = String(params.type || '');
     const contentId = String(params.contentId || '');
-    const store = resolveContentStore(type);
-    if (!store) return jsonError(404, 'CONTENT_TYPE_NOT_FOUND', 'Content type not found.');
-    if (!store[contentId]) return jsonError(404, 'CONTENT_NOT_FOUND', 'Content not found.');
+    const resolved = resolveContentRecord(type, contentId);
+    if (!resolved) return jsonError(404, 'CONTENT_NOT_FOUND', 'Content not found.');
     if (isContentInUse(type, contentId)) {
       return jsonError(409, 'CONTENT_IN_USE', 'Content is referenced by course item.');
     }
 
-    delete store[contentId];
+    delete resolved.store[contentId];
     pushAuditLog(user, 'Xoa content', `${type}/${contentId}`);
     await persistState();
     return HttpResponse.json({ ok: true, type, contentId });
@@ -598,7 +726,7 @@ export const managementHandlers = [
     if (!module) return jsonError(404, 'MODULE_NOT_FOUND', 'Module not found.');
 
     const body = await request.json().catch(() => null);
-    const type = body?.type;
+    const type = normalizeCourseItemType(body?.type);
     const contentId = body?.contentId;
     const title = body?.title?.trim();
     if (!COURSE_ITEM_TYPES.has(type) || !contentId) {
@@ -716,7 +844,7 @@ export const managementHandlers = [
     if (index < 0) return jsonError(404, 'ITEM_NOT_FOUND', 'Item not found.');
 
     const body = await request.json().catch(() => null);
-    const type = body?.type;
+    const type = normalizeCourseItemType(body?.type);
     const contentId = body?.contentId;
     const title = body?.title?.trim();
     if (!COURSE_ITEM_TYPES.has(type) || !contentId) {
@@ -771,6 +899,7 @@ export const managementHandlers = [
     return HttpResponse.json({ ok: true, course, module });
   }),
 ];
+
 
 
 

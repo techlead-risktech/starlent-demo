@@ -1,0 +1,28 @@
+{
+  "content": {
+    "id": "string",
+    "contentType": "video|audio|lesson_reading|flashcard|quiz|roleplay|assignment|survey|live_session",
+    "title": "string",
+    "status": "draft|published|archived",
+    "version": 1,
+    "estimatedDuration": 10,
+    "difficulty": "beginner|intermediate|advanced",
+    "tags": [],
+    "skills": [],
+    "availableFrom": null,
+    "dueAt": null,
+    "payload": {}
+  },
+  "quizQuestion": {
+    "id": "string",
+    "questionType": "single_choice|multiple_select|true_false|short_answer|ordering",
+    "question": "string",
+    "options": [],
+    "correctIndex": 0,
+    "correctIndices": [],
+    "sampleAnswer": "string",
+    "items": [],
+    "correctOrder": [],
+    "explanation": "string"
+  }
+}

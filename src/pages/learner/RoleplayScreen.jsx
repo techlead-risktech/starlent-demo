@@ -60,7 +60,7 @@ export default function RoleplayScreen() {
       completeItem(resolvedItemId, 20);
     }
     setSubmitted(true);
-    showToast('✅ Đã gửi! +20 XP');
+    showToast('✅ Đã gửi! +20 điểm');
   };
 
   if (!content) return <LearnerLayout topBar={<div className="page__header"><div className="page__title">Đang tải...</div></div>}><div className="empty-state">Đang tải...</div></LearnerLayout>;

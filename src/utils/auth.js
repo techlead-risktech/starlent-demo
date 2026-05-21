@@ -4,6 +4,7 @@
  */
 
 const KEYS = { USER: 'starlent_user', LEARNING: 'starlent_learning', ONBOARDED: 'starlent_onboarded' };
+const APP_TIMEZONE = 'Asia/Ho_Chi_Minh';
 
 export function loginUser(user) {
   const { password, ...safe } = user;
@@ -46,11 +47,32 @@ export function saveLearningState(s) { localStorage.setItem(KEYS.LEARNING, JSON.
 export function updateLearningState(updates) { const s = { ...getLearningState(), ...updates }; saveLearningState(s); return s; }
 export function isItemCompleted(id) { return getLearningState().completedItems.includes(id); }
 
-function todayISO() { return new Date().toISOString().split('T')[0]; }
+function todayISO() {
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone: APP_TIMEZONE,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).formatToParts(new Date());
+  const yyyy = parts.find((p) => p.type === 'year')?.value || '1970';
+  const mm = parts.find((p) => p.type === 'month')?.value || '01';
+  const dd = parts.find((p) => p.type === 'day')?.value || '01';
+  return `${yyyy}-${mm}-${dd}`;
+}
 function addDays(dateISO, days) {
-  const d = new Date(dateISO + 'T00:00:00');
-  d.setDate(d.getDate() + days);
-  return d.toISOString().split('T')[0];
+  const [y, m, d] = String(dateISO).split('-').map((x) => Number(x));
+  const utcNoon = new Date(Date.UTC(y || 1970, (m || 1) - 1, d || 1, 12, 0, 0));
+  utcNoon.setUTCDate(utcNoon.getUTCDate() + Number(days || 0));
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone: APP_TIMEZONE,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).formatToParts(utcNoon);
+  const yyyy = parts.find((p) => p.type === 'year')?.value || '1970';
+  const mm = parts.find((p) => p.type === 'month')?.value || '01';
+  const dd = parts.find((p) => p.type === 'day')?.value || '01';
+  return `${yyyy}-${mm}-${dd}`;
 }
 
 export function completeItem(itemId, xpAmount = 10) {

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+﻿import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth.jsx';
 import { useOnlineStatus } from '../../hooks/useToast.js';
@@ -24,7 +24,7 @@ function StreakStrip({ days }) {
   return (
     <div className="card" style={{ padding: 14, marginBottom: 20 }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
-        <div style={{ fontWeight: 700, fontSize: 14 }}>📆 7 ngày gần nhất</div>
+        <div style={{ fontWeight: 700, fontSize: 14 }}>🗓️ 7 ngày gần nhất</div>
         <div style={{ fontSize: 12, color: 'var(--color-text-muted)' }}>{days.filter((d) => d.studied).length}/7 ngày học</div>
       </div>
       <div className="streak-strip">
@@ -184,10 +184,10 @@ export default function LearnerDashboard() {
       <StreakStrip days={days} />
 
       <div className="grid-4" style={{ marginBottom: 20 }}>
-        <div className="stat-card"><div className="stat-card__label">🔥 Streak</div><div className="stat-card__value">{streak} <span style={{ fontSize: 14 }}>ngày</span></div></div>
-        <div className="stat-card"><div className="stat-card__label">⭐ Tổng XP</div><div className="stat-card__value">{xp.toLocaleString()}</div><div className="progress-bar" style={{ marginTop: 8 }}><div className="progress-bar__fill" style={{ width: `${(xp % 500) / 5}%` }} /></div><div style={{ fontSize: 10, color: 'var(--color-text-muted)', marginTop: 4 }}>Còn {xpToNext} XP nữa lên cấp {level + 1}</div></div>
-        <div className="stat-card"><div className="stat-card__label">🎯 Cấp độ</div><div className="stat-card__value">{level}</div></div>
-        <div className="stat-card"><div className="stat-card__label">📝 Hôm nay</div><div className="stat-card__value">{daily.done} <span style={{ fontSize: 14 }}>bài</span></div></div>
+        <div className="stat-card"><div className="stat-card__label">🔥 Số ngày học liên tiếp</div><div className="stat-card__value">{streak} <span style={{ fontSize: 14 }}>ngày</span></div></div>
+        <div className="stat-card"><div className="stat-card__label">⭐ Tổng điểm kinh nghiệm</div><div className="stat-card__value">{xp.toLocaleString()}</div><div className="progress-bar" style={{ marginTop: 8 }}><div className="progress-bar__fill" style={{ width: `${(xp % 500) / 5}%` }} /></div><div style={{ fontSize: 10, color: 'var(--color-text-muted)', marginTop: 4 }}>Còn {xpToNext} điểm nữa lên cấp {level + 1}</div></div>
+        <div className="stat-card"><div className="stat-card__label">🎯 Cấp độ</div><div className="stat-card__value">{level}</div><div style={{ fontSize: 10, color: 'var(--color-text-muted)', marginTop: 4 }}>{xp.toLocaleString()} điểm</div></div>
+        <div className="stat-card"><div className="stat-card__label">📝 Hôm nay</div><div className="stat-card__value">{daily.done} <span style={{ fontSize: 14 }}>bài</span></div><div style={{ fontSize: 10, color: 'var(--color-text-muted)', marginTop: 4 }}>đã hoàn thành</div></div>
       </div>
 
       {inProgress.length > 0 && (
@@ -240,7 +240,7 @@ export default function LearnerDashboard() {
                   {dueCount > 0 && <span className="badge badge--danger">{dueCount} đến hạn</span>}
                 </div>
                 <div style={{ fontSize: 13, color: 'var(--color-text-secondary)' }}>
-                  {dueCount > 0 ? `Có ${dueCount} thẻ cần ôn hôm nay` : 'Không có thẻ đến hạn. Học tiếp để tích lũy thẻ ôn tập!'}
+                  {dueCount > 0 ? `Có ${dueCount} thẻ cần ôn hôm nay` : 'Không có thẻ đến hạn. Học tiếp để tích luỹ thẻ ôn tập!'}
                 </div>
               </div>
             </div>
@@ -261,3 +261,4 @@ export default function LearnerDashboard() {
     </LearnerLayout>
   );
 }
+

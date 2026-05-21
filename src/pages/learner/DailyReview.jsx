@@ -44,7 +44,7 @@ export default function DailyReview() {
     }
     setXp(totalXp);
     setDone(true);
-    showToast(`✅ Đã ôn ${count} thẻ! +${totalXp} XP`);
+    showToast(`✅ Đã ôn ${count} thẻ! +${totalXp} điểm`);
   };
 
   const rate = async (rating) => {
@@ -61,7 +61,7 @@ export default function DailyReview() {
   };
 
   if (loading) return <LearnerLayout topBar={<div className="page__header"><div className="page__title">Ôn tập hằng ngày</div></div>}><div style={{ padding: 16 }}><div className="skeleton skeleton-card" /></div></LearnerLayout>;
-  if (done) return <LearnerLayout topBar={<div className="page__header"><div className="page__title">Hoàn tất</div></div>}><div style={{ textAlign: 'center', padding: 40 }}><div style={{ fontSize: 64 }}>🔄</div><h2 style={{ fontSize: 24, fontWeight: 800, margin: 8 }}>Hoàn thành!</h2><p style={{ fontSize: 16, color: 'var(--color-text-secondary)' }}>Đã ôn {reviewed} thẻ</p><p style={{ fontSize: 20, fontWeight: 700, color: 'var(--color-primary)', margin: '8px 0 24px' }}>+{xp} XP</p><button className="btn btn--primary btn--lg btn--full" onClick={() => navigate('/learner/dashboard')}>Về trang chủ</button></div></LearnerLayout>;
+  if (done) return <LearnerLayout topBar={<div className="page__header"><div className="page__title">Hoàn tất</div></div>}><div style={{ textAlign: 'center', padding: 40 }}><div style={{ fontSize: 64 }}>🔄</div><h2 style={{ fontSize: 24, fontWeight: 800, margin: 8 }}>Hoàn thành!</h2><p style={{ fontSize: 16, color: 'var(--color-text-secondary)' }}>Đã ôn {reviewed} thẻ</p><p style={{ fontSize: 20, fontWeight: 700, color: 'var(--color-primary)', margin: '8px 0 24px' }}>+{xp} điểm</p><button className="btn btn--primary btn--lg btn--full" onClick={() => navigate('/learner/dashboard')}>Về trang chủ</button></div></LearnerLayout>;
   if (cards.length === 0) return <LearnerLayout topBar={<div className="page__header"><div className="page__title">Ôn tập</div></div>}><div className="empty-state"><div className="empty-state__icon">🎉</div><div className="empty-state__title">Không có thẻ cần ôn</div><button className="btn btn--primary" style={{ marginTop: 16 }} onClick={() => navigate('/learner/dashboard')}>Về trang chủ</button></div></LearnerLayout>;
 
   const card = cards[idx];

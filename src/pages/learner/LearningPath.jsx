@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth.jsx';
 import { getLearningState } from '../../utils/auth.js';
@@ -6,6 +6,9 @@ import { COURSE_STATUS, courses as fallbackCourses, getCourseProgress } from '..
 import { getLearnerCourses } from '../../api/services/courses.js';
 import LearnerLayout from '../../components/layout/LearnerLayout.jsx';
 import { PageSkeleton } from '../../components/common/Skeleton.jsx';
+
+const STATE_SYNC_EVENT = 'starlent:state-sync';
+const STATE_SYNC_KEY = 'starlent_state_sync_v1';
 
 const STATUS = {
   DONE: { label: 'Hoàn thành', color: 'var(--color-success)', icon: '✅' },
@@ -79,6 +82,8 @@ export default function LearningPath() {
   const [courses, setCourses] = useState([]);
   const [view, setView] = useState('roadmap');
   const [filter, setFilter] = useState('all');
+  const [reloadTick, setReloadTick] = useState(0);
+  const lastSyncAtRef = useRef(0);
 
   useEffect(() => {
     let mounted = true;
@@ -107,6 +112,34 @@ export default function LearningPath() {
     }
     load();
     return () => { mounted = false; };
+  }, [reloadTick]);
+
+  useEffect(() => {
+    const triggerSync = () => {
+      const now = Date.now();
+      if (now - lastSyncAtRef.current < 800) return;
+      lastSyncAtRef.current = now;
+      setReloadTick((value) => value + 1);
+    };
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') triggerSync();
+    };
+    const handleStorageSync = (event) => {
+      if (event.key === STATE_SYNC_KEY) triggerSync();
+    };
+
+    window.addEventListener('focus', triggerSync);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener(STATE_SYNC_EVENT, triggerSync);
+    window.addEventListener('storage', handleStorageSync);
+
+    return () => {
+      window.removeEventListener('focus', triggerSync);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener(STATE_SYNC_EVENT, triggerSync);
+      window.removeEventListener('storage', handleStorageSync);
+    };
   }, []);
 
   if (loading) return <LearnerLayout topBar={<div className="page__header"><div className="page__title">Lộ trình học</div></div>}><PageSkeleton /></LearnerLayout>;

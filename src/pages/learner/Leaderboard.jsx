@@ -71,7 +71,7 @@ export default function Leaderboard() {
                     <div style={{ width: 32, textAlign: 'center', fontSize: 18, fontWeight: 700 }}>{medal || i + 1}</div>
                     <div className="avatar avatar--sm">{l.name.charAt(0)}</div>
                     <div style={{ flex: 1 }}><div style={{ fontWeight: 700, fontSize: 14 }}>{l.name}{isMe && ' (Bạn)'}</div><div style={{ fontSize: 12, color: 'var(--color-text-muted)' }}>{l.department}</div></div>
-                    <div style={{ textAlign: 'right' }}><div style={{ fontWeight: 700, fontSize: 15, color: 'var(--color-primary)' }}>{l.xp.toLocaleString()} XP</div><div style={{ fontSize: 11, color: 'var(--color-text-muted)' }}>Cấp {level} · 🔥{l.streak}</div></div>
+                    <div style={{ textAlign: 'right' }}><div style={{ fontWeight: 700, fontSize: 15, color: 'var(--color-primary)' }}>{l.xp.toLocaleString()} điểm</div><div style={{ fontSize: 11, color: 'var(--color-text-muted)' }}>Cấp {level} · 🔥{l.streak}</div></div>
                   </div>
                 </div>
               );

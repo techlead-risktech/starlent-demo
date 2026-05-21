@@ -18,9 +18,12 @@ const ITEM_TYPE_OPTIONS = [
   { value: 'flashcard', label: 'Flashcard' },
   { value: 'video', label: 'Video' },
   { value: 'audio', label: 'Audio' },
-  { value: 'quiz_mc', label: 'Quiz MC' },
-  { value: 'quiz_sequence', label: 'Quiz Sequence' },
+  { value: 'quiz', label: 'Quiz' },
   { value: 'roleplay', label: 'Roleplay' },
+  { value: 'lesson_reading', label: 'Reading' },
+  { value: 'assignment', label: 'Assignment' },
+  { value: 'survey', label: 'Survey' },
+  { value: 'live_session', label: 'Live Session' },
 ];
 
 export default function CourseBuilderPanel({
@@ -134,7 +137,7 @@ export default function CourseBuilderPanel({
     }
     loadCourse();
     return () => { mounted = false; };
-  }, [selectedCourseId, selectedCourseIdProp, courses, onSelectedCourseIdChange]);
+  }, [selectedCourseId, selectedCourseIdProp, onSelectedCourseIdChange]);
 
   const selectedTypeOptions = useMemo(() => {
     const typeMap = {};

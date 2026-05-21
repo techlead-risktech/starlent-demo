@@ -74,7 +74,7 @@ export default function SequenceQuiz() {
       completeItem(resolvedItemId, 15);
     }
     setDone(true);
-    showToast('✅ Chính xác! +15 XP');
+    showToast('✅ Chính xác! +15 điểm');
   };
 
   if (!content) return <LearnerLayout topBar={<div className="page__header"><div className="page__title">Đang tải...</div></div>}><div className="empty-state">Đang tải...</div></LearnerLayout>;
