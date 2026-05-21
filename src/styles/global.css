@@ -6,10 +6,10 @@
 /* --- CSS Custom Properties --- */
 :root {
   /* Primary Palette — Cam/Nâu ấm áp */
-  --color-primary: #FF6B35;
-  --color-primary-hover: #E55A2B;
-  --color-primary-light: #FFF0EB;
-  --color-primary-dark: #C4451A;
+  --color-primary: #7BCFB8;
+  --color-primary-hover: #68C2A9;
+  --color-primary-light: #E8F8F3;
+  --color-primary-dark: #2F8F78;
 
   /* Secondary — Xanh lam */
   --color-secondary: #3B82F6;
