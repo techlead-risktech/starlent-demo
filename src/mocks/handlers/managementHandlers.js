@@ -23,7 +23,7 @@ import {
 import { conversations } from '../../data/mockChats.js';
 import { getCurrentUser } from '../../utils/auth.js';
 import { jsonError, requireRoleUser } from './_utils.js';
-import { assignments, ensureStateHydrated, persistState, reminders } from './_persistentState.js';
+import { assignments, ensureStateHydrated, persistState, reminders, tenants } from './_persistentState.js';
 
 const API_BASE = '/api/v1';
 const ADMIN_ROLES = ['admin'];
@@ -147,6 +147,7 @@ function contentDefaultPayloadByType(type, id, title) {
         title,
         videoUrl: '',
         youtubeId: '',
+        progressMode: 'lesson_duration',
         duration: 0,
         transcript: '',
         captions: '',
@@ -156,8 +157,10 @@ function contentDefaultPayloadByType(type, id, title) {
         id,
         title,
         audioUrl: '',
-        duration: 0,
+        duration: 30,
         transcript: '',
+        transcriptSegments: [],
+        checkpoints: [],
       };
     case 'quiz':
       return {
@@ -269,6 +272,61 @@ function normalizeQuizMcData(data) {
 
 function normalizeContentPatch(type, patch) {
   if (type === 'quiz') return normalizeQuizMcData(patch || {});
+  if (type === 'video') {
+    return {
+      videoUrl: String(patch?.videoUrl || ''),
+      youtubeId: String(patch?.youtubeId || ''),
+      progressMode: String(patch?.progressMode || 'lesson_duration') === 'full_video_duration' ? 'full_video_duration' : 'lesson_duration',
+      duration: Math.max(0, Number(patch?.duration || 0)),
+      transcript: String(patch?.transcript || ''),
+      captions: String(patch?.captions || ''),
+      transcriptSegments: Array.isArray(patch?.transcriptSegments)
+        ? patch.transcriptSegments.map((segment, idx) => ({
+          id: String(segment?.id || `seg_${idx + 1}`),
+          startSec: Math.max(0, Number(segment?.startSec || 0)),
+          endSec: Math.max(0, Number(segment?.endSec || 0)),
+          text: String(segment?.text || ''),
+        }))
+        : [],
+      checkpoints: Array.isArray(patch?.checkpoints)
+        ? patch.checkpoints.map((checkpoint, idx) => ({
+          id: String(checkpoint?.id || `cp_${idx + 1}`),
+          atSec: Math.max(0, Number(checkpoint?.atSec || 0)),
+          question: String(checkpoint?.question || ''),
+          options: Array.isArray(checkpoint?.options)
+            ? checkpoint.options.map((option) => String(option || ''))
+            : [],
+          correctIndex: Math.max(0, Number(checkpoint?.correctIndex || 0)),
+        }))
+        : [],
+    };
+  }
+  if (type === 'audio') {
+    return {
+      audioUrl: String(patch?.audioUrl || ''),
+      duration: Math.max(0, Number(patch?.duration || 0)),
+      transcript: String(patch?.transcript || ''),
+      transcriptSegments: Array.isArray(patch?.transcriptSegments)
+        ? patch.transcriptSegments.map((segment, idx) => ({
+          id: String(segment?.id || `seg_${idx + 1}`),
+          startSec: Math.max(0, Number(segment?.startSec || 0)),
+          endSec: Math.max(0, Number(segment?.endSec || 0)),
+          text: String(segment?.text || ''),
+        }))
+        : [],
+      checkpoints: Array.isArray(patch?.checkpoints)
+        ? patch.checkpoints.map((checkpoint, idx) => ({
+          id: String(checkpoint?.id || `cp_${idx + 1}`),
+          atSec: Math.max(0, Number(checkpoint?.atSec || 0)),
+          question: String(checkpoint?.question || ''),
+          options: Array.isArray(checkpoint?.options)
+            ? checkpoint.options.map((option) => String(option || ''))
+            : [],
+          correctIndex: Math.max(0, Number(checkpoint?.correctIndex || 0)),
+        }))
+        : [],
+    };
+  }
   return patch || {};
 }
 
@@ -294,6 +352,29 @@ function createCourseFromPayload(body) {
     dueDate: null,
     createdAt: new Date().toISOString().slice(0, 10),
     modules: [],
+  };
+}
+
+function createTenantFromPayload(body) {
+  const now = new Date().toISOString();
+  return {
+    id: nextId('tn'),
+    name: String(body?.name || '').trim(),
+    domain: String(body?.domain || '').trim(),
+    logoUrl: String(body?.logoUrl || '').trim(),
+    theme: {
+      primaryColor: String(body?.theme?.primaryColor || '#14B8A6'),
+      secondaryColor: String(body?.theme?.secondaryColor || '#0F766E'),
+      backgroundColor: String(body?.theme?.backgroundColor || '#F8FAFC'),
+      textColor: String(body?.theme?.textColor || '#0F172A'),
+    },
+    typography: {
+      fontFamily: String(body?.typography?.fontFamily || 'Inter'),
+      headingStyle: String(body?.typography?.headingStyle || 'Semi Bold'),
+      bodyStyle: String(body?.typography?.bodyStyle || 'Regular'),
+    },
+    status: String(body?.status || 'active'),
+    createdAt: now,
   };
 }
 
@@ -362,7 +443,42 @@ function createAssignmentRecord(payload, actor, learner, course) {
     dueDate: payload.dueDate || null,
     assignedBy: actor.id,
     assignedAt: new Date().toISOString(),
+    required: payload.required !== false,
+    scope: payload.scope || 'user',
   };
+}
+
+function assignCourseRecords({ actor, course, dueDate, required, userId, department, scope }) {
+  if (scope === 'department') {
+    const targetDepartment = String(department || '').trim();
+    if (!targetDepartment) {
+      return { error: jsonError(422, 'VALIDATION_FAILED', 'department là bắt buộc khi gán theo phòng ban.') };
+    }
+    const learners = users.filter((item) => item.role === 'learner' && item.department === targetDepartment);
+    if (learners.length === 0) {
+      return { error: jsonError(404, 'NOT_FOUND', 'Không tìm thấy learner trong phòng ban đã chọn.') };
+    }
+    const created = learners.map((learner) => createAssignmentRecord({
+      courseId: course.id,
+      userId: learner.id,
+      dueDate,
+      required,
+      scope: 'department',
+    }, actor, learner, course));
+    assignments.push(...created);
+    return { created };
+  }
+
+  if (!userId) {
+    return { error: jsonError(422, 'VALIDATION_FAILED', 'userId là bắt buộc khi gán theo học viên.') };
+  }
+  const learner = findLearnerById(userId);
+  if (!learner) {
+    return { error: jsonError(404, 'NOT_FOUND', 'Learner không tồn tại.') };
+  }
+  const created = [createAssignmentRecord({ courseId: course.id, userId, dueDate, required, scope: 'user' }, actor, learner, course)];
+  assignments.push(...created);
+  return { created };
 }
 
 function createReminderRecord(payload, actor, prefix = 'reminder') {
@@ -497,7 +613,88 @@ export const managementHandlers = [
       courseProgressReport,
       quizResults,
       auditLogs,
+      assignments,
+      tenants,
     });
+  }),
+
+  http.post(`${API_BASE}/admin/assignments`, async ({ request }) => {
+    await ensureStateHydrated();
+    const { user, error } = requireRoleUser(getCurrentUser, ADMIN_ROLES);
+    if (error) return error;
+    const body = await request.json().catch(() => null);
+    const courseId = body?.courseId;
+    if (!courseId) return jsonError(422, 'VALIDATION_FAILED', 'courseId là bắt buộc.');
+    const course = findCourseById(courseId);
+    if (!course) return jsonError(404, 'NOT_FOUND', 'Course không tồn tại.');
+    const scope = String(body?.scope || (body?.department ? 'department' : 'user'));
+    const result = assignCourseRecords({
+      actor: user,
+      course,
+      dueDate: body?.dueDate || null,
+      required: body?.required !== false,
+      userId: body?.userId || null,
+      department: body?.department || null,
+      scope,
+    });
+    if (result.error) return result.error;
+    pushAuditLog(user, 'Admin phân phối khoá học', `${course.id} (${scope})`);
+    await persistState();
+    return HttpResponse.json({ ok: true, assignments: result.created });
+  }),
+
+  http.post(`${API_BASE}/admin/tenants`, async ({ request }) => {
+    await ensureStateHydrated();
+    const { user, error } = requireRoleUser(getCurrentUser, ADMIN_ROLES);
+    if (error) return error;
+    const body = await request.json().catch(() => null);
+    if (!body?.name || !body?.domain) {
+      return jsonError(422, 'VALIDATION_FAILED', 'name và domain là bắt buộc.');
+    }
+    if (tenants.some((tenant) => String(tenant.domain || '').toLowerCase() === String(body.domain || '').toLowerCase())) {
+      return jsonError(409, 'TENANT_DOMAIN_EXISTS', 'Domain tenant đã tồn tại.');
+    }
+    const tenant = createTenantFromPayload(body);
+    tenants.push(tenant);
+    pushAuditLog(user, 'Tạo tenant', tenant.id);
+    await persistState();
+    return HttpResponse.json({ ok: true, tenant });
+  }),
+
+  http.put(`${API_BASE}/admin/tenants/:tenantId`, async ({ params, request }) => {
+    await ensureStateHydrated();
+    const { user, error } = requireRoleUser(getCurrentUser, ADMIN_ROLES);
+    if (error) return error;
+    const tenant = tenants.find((item) => item.id === params.tenantId);
+    if (!tenant) return jsonError(404, 'TENANT_NOT_FOUND', 'Tenant không tồn tại.');
+
+    const body = await request.json().catch(() => null);
+    const name = String(body?.name || '').trim();
+    const domain = String(body?.domain || '').trim();
+    if (!name || !domain) return jsonError(422, 'VALIDATION_FAILED', 'name và domain là bắt buộc.');
+
+    const duplicateDomain = tenants.some((item) => item.id !== tenant.id && String(item.domain || '').toLowerCase() === domain.toLowerCase());
+    if (duplicateDomain) return jsonError(409, 'TENANT_DOMAIN_EXISTS', 'Domain tenant đã tồn tại.');
+
+    tenant.name = name;
+    tenant.domain = domain;
+    tenant.logoUrl = String(body?.logoUrl || '').trim();
+    tenant.theme = {
+      primaryColor: String(body?.theme?.primaryColor || tenant.theme?.primaryColor || '#14B8A6'),
+      secondaryColor: String(body?.theme?.secondaryColor || tenant.theme?.secondaryColor || '#0F766E'),
+      backgroundColor: String(body?.theme?.backgroundColor || tenant.theme?.backgroundColor || '#F8FAFC'),
+      textColor: String(body?.theme?.textColor || tenant.theme?.textColor || '#0F172A'),
+    };
+    tenant.typography = {
+      fontFamily: String(body?.typography?.fontFamily || tenant.typography?.fontFamily || 'Inter'),
+      headingStyle: String(body?.typography?.headingStyle || tenant.typography?.headingStyle || 'Semi Bold'),
+      bodyStyle: String(body?.typography?.bodyStyle || tenant.typography?.bodyStyle || 'Regular'),
+    };
+    tenant.status = String(body?.status || tenant.status || 'active');
+
+    pushAuditLog(user, 'Cập nhật tenant', tenant.id);
+    await persistState();
+    return HttpResponse.json({ ok: true, tenant });
   }),
 
   http.post(`${API_BASE}/admin/users`, async ({ request }) => {
@@ -546,7 +743,35 @@ export const managementHandlers = [
     return HttpResponse.json({
       user,
       courses,
+      users: users.filter((item) => item.role === 'learner'),
+      assignments,
     });
+  }),
+
+  http.post(`${API_BASE}/editor/assignments`, async ({ request }) => {
+    await ensureStateHydrated();
+    const { user, error } = requireRoleUser(getCurrentUser, EDITOR_ROLES);
+    if (error) return error;
+    const body = await request.json().catch(() => null);
+    const courseId = body?.courseId;
+    const userId = body?.userId;
+    if (!courseId || !userId) return jsonError(422, 'VALIDATION_FAILED', 'courseId và userId là bắt buộc.');
+    const course = findCourseById(courseId);
+    if (!course) return jsonError(404, 'NOT_FOUND', 'Course không tồn tại.');
+    if (course.status !== 'published') return jsonError(422, 'COURSE_NOT_PUBLISHED', 'Editor chỉ được gán khoá học đã xuất bản.');
+    const result = assignCourseRecords({
+      actor: user,
+      course,
+      dueDate: body?.dueDate || null,
+      required: body?.required !== false,
+      userId,
+      department: null,
+      scope: 'user',
+    });
+    if (result.error) return result.error;
+    pushAuditLog(user, 'Editor gán khoá học cho học viên', `${course.id}-${userId}`);
+    await persistState();
+    return HttpResponse.json({ ok: true, assignments: result.created, assignment: result.created[0] });
   }),
 
   http.post(`${API_BASE}/editor/courses`, async ({ request }) => {

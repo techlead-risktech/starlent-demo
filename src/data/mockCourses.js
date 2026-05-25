@@ -23,6 +23,7 @@ export const courses = [
           { id: 'i1', type: 'flashcard', title: 'Thuật ngữ giao tiếp', contentId: 'fc1' },
           { id: 'i2', type: 'video', title: 'Video: Lắng nghe chủ động', contentId: 'vd1' },
           { id: 'i3', type: 'quiz_mc', title: 'Kiểm tra: Nguyên tắc giao tiếp', contentId: 'qz1' },
+          { id: 'i3_ls1', type: 'live_session', title: 'Live Session: Workshop Q&A trực tuyến', contentId: 'ls1' },
         ]},
       { id: 'm2', title: 'Giao tiếp với khách hàng', order: 2, unlockedAfterModule: 'm1',
         items: [

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+﻿import { useState, useEffect } from 'react';
 import { useParams, useSearchParams, useNavigate } from 'react-router-dom';
 import { getContentById } from '../../data/mockContent.js';
 import { courses } from '../../data/mockCourses.js';
@@ -8,6 +8,17 @@ import { useToast, usePreventLeave } from '../../hooks/useToast.js';
 import { useLessonDirty } from '../../hooks/useLessonGuard.jsx';
 import LearnerLayout from '../../components/layout/LearnerLayout.jsx';
 import LeaveConfirmModal from '../../components/common/LeaveConfirmModal.jsx';
+
+function normalizeVietnameseText(value) {
+  const text = String(value || '');
+  if (!/Ã|Â|Ä|Æ|á»|âœ|â€|ðŸ/.test(text)) return text;
+  try {
+    const bytes = Uint8Array.from(Array.from(text).map((char) => char.charCodeAt(0) & 0xff));
+    return new TextDecoder('utf-8').decode(bytes);
+  } catch {
+    return text;
+  }
+}
 
 function fallbackSyncCourseProgress({ itemId, moduleId, courseId, xpAmount }) {
   completeItem(itemId, xpAmount);
@@ -105,7 +116,7 @@ export default function FlashcardScreen() {
 
   if (done) {
     return (
-      <LearnerLayout topBar={<div className="page__header"><div className="page__title">{content.title}</div></div>}>
+      <LearnerLayout topBar={<div className="page__header"><div className="page__title">{normalizeVietnameseText(content.title)}</div></div>}>
         <div style={{ textAlign: 'center', padding: 40 }}>
           <div style={{ fontSize: 64, marginBottom: 16 }}>{percent >= 70 ? '🎉' : '📚'}</div>
           <h2 style={{ fontSize: 24, fontWeight: 800, margin: '8px 0' }}>Hoàn thành!</h2>
@@ -125,7 +136,7 @@ export default function FlashcardScreen() {
   }
 
   return (
-    <LearnerLayout topBar={<div className="page__header" style={{ display: 'flex', alignItems: 'center', gap: 12 }}><button className="btn btn--ghost btn--sm" onClick={handleBack} style={{ flexShrink: 0 }}>← Quay lại</button><div style={{ flex: 1 }}><div className="page__title">{content.title}</div><div style={{ fontSize: 13, color: 'var(--color-text-muted)' }}>Thẻ {idx + 1}/{content.cards.length}</div></div></div>}>
+    <LearnerLayout topBar={<div className="page__header" style={{ display: 'flex', alignItems: 'center', gap: 12 }}><button className="btn btn--ghost btn--sm" onClick={handleBack}>← Quay lại</button><div style={{ flex: 1 }}><div className="page__title">{normalizeVietnameseText(content.title)}</div><div style={{ fontSize: 13, color: 'var(--color-text-muted)' }}>Thẻ {idx + 1}/{content.cards.length}</div></div></div>}>
       <div style={{ padding: 16 }}>
         <div className="progress-bar" style={{ marginBottom: 20 }}>
           <div className="progress-bar__fill progress-bar__fill--secondary" style={{ width: `${((idx + 1) / content.cards.length) * 100}%` }} />
@@ -133,11 +144,11 @@ export default function FlashcardScreen() {
 
         <div className="card" style={{ marginBottom: 20, background: 'var(--color-primary-light)', borderColor: 'var(--color-primary)' }}>
           <p style={{ fontSize: 13, color: 'var(--color-primary-dark)', fontWeight: 600, marginBottom: 8 }}>📝 Chọn đáp án đúng:</p>
-          <h3 style={{ fontSize: 18, fontWeight: 700, lineHeight: 1.5 }}>{card.front}</h3>
+          <h3 style={{ fontSize: 18, fontWeight: 700, lineHeight: 1.5 }}>{normalizeVietnameseText(card.front)}</h3>
         </div>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 20 }}>
-          {card.options.map((opt, i) => {
+          {(card.options || []).map((opt, i) => {
             let bg = 'var(--color-surface)';
             let border = '1.5px solid var(--color-border)';
             let textColor = 'var(--color-text-primary)';
@@ -166,7 +177,7 @@ export default function FlashcardScreen() {
                 style={{ background: bg, border, color: textColor, justifyContent: 'flex-start', textAlign: 'left', padding: '14px 16px', fontSize: 14, fontWeight: 500, borderRadius: 'var(--radius-md)', minHeight: 52, whiteSpace: 'normal', wordBreak: 'break-word', lineHeight: 1.4 }}
               >
                 <span style={{ marginRight: 10, fontWeight: 700, color: 'var(--color-text-muted)', fontSize: 12 }}>{['A', 'B', 'C', 'D'][i]}</span>
-                <span style={{ flex: 1 }}>{opt}</span>
+                <span style={{ flex: 1 }}>{normalizeVietnameseText(opt)}</span>
                 {showResult && i === card.correctIndex && <span style={{ fontSize: 18 }}>✓</span>}
                 {showResult && i === selected && i !== card.correctIndex && <span style={{ fontSize: 18 }}>✕</span>}
               </button>
@@ -179,7 +190,7 @@ export default function FlashcardScreen() {
             <p style={{ fontSize: 12, fontWeight: 700, marginBottom: 4, color: selected === card.correctIndex ? '#065F46' : '#991B1B' }}>
               {selected === card.correctIndex ? '✅ Chính xác!' : '❌ Chưa đúng'}
             </p>
-            <p style={{ fontSize: 13, color: 'var(--color-text-secondary)', lineHeight: 1.5 }}>{card.explanation}</p>
+            <p style={{ fontSize: 13, color: 'var(--color-text-secondary)', lineHeight: 1.5 }}>{normalizeVietnameseText(card.explanation)}</p>
           </div>
         )}
 
@@ -194,4 +205,3 @@ export default function FlashcardScreen() {
     </LearnerLayout>
   );
 }
-

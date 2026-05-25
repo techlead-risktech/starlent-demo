@@ -1,4 +1,5 @@
 ﻿import { useEffect, useRef, useState } from 'react';
+import PropTypes from 'prop-types';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import AdminLayout from '../../components/layout/AdminLayout.jsx';
 import Modal from '../../components/common/Modal.jsx';
@@ -16,9 +17,12 @@ import {
   quizResults as fallbackQuizResults,
   auditLogs as fallbackAuditLogs,
 } from '../../data/mockReports.js';
+import { tenants as fallbackTenants } from '../../data/mockTenants.js';
 import { createUser } from '../../api/services/userManagement.js';
 import { createCourseByScope } from '../../api/services/courseManagement.js';
 import { getAdminReportingDashboard } from '../../api/services/reporting.js';
+import { createTenant, updateTenant } from '../../api/services/tenantManagement.js';
+import { assignCourseByAdmin } from '../../api/services/distributionManagement.js';
 
 const STATE_SYNC_EVENT = 'starlent:state-sync';
 const STATE_SYNC_KEY = 'starlent_state_sync_v1';
@@ -34,6 +38,7 @@ const ROLES = [
 
 const DEPARTMENTS = ['Công nghệ thông tin', 'Nhân sự', 'Kinh doanh', 'Marketing', 'Tài chính', 'Vận hành'];
 
+// eslint-disable-next-line react/prop-types
 function AddUserForm({ onClose, onSubmit }) {
   const [form, setForm] = useState({ name: '', email: '', role: 'learner', department: '', password: '' });
   const change = (field) => (event) => setForm((prev) => ({ ...prev, [field]: event.target.value }));
@@ -56,6 +61,85 @@ function AddUserForm({ onClose, onSubmit }) {
   );
 }
 
+function TenantForm({ initialValue, onClose, onSubmit }) {
+  const [form, setForm] = useState(initialValue || {
+    name: '',
+    domain: '',
+    logoUrl: '',
+    status: 'active',
+    theme: {
+      primaryColor: '#14B8A6',
+      secondaryColor: '#0F766E',
+      backgroundColor: '#F8FAFC',
+      textColor: '#0F172A',
+    },
+    typography: {
+      fontFamily: 'Inter',
+      headingStyle: 'Semi Bold',
+      bodyStyle: 'Regular',
+    },
+  });
+
+  const change = (field) => (event) => setForm((prev) => ({ ...prev, [field]: event.target.value }));
+  const changeTheme = (field) => (event) => setForm((prev) => ({ ...prev, theme: { ...prev.theme, [field]: event.target.value } }));
+  const changeTypography = (field) => (event) => setForm((prev) => ({ ...prev, typography: { ...prev.typography, [field]: event.target.value } }));
+
+  return (
+    <form onSubmit={(event) => { event.preventDefault(); onSubmit(form); }} className="admin-form">
+      <h3 className="admin-form__title">{initialValue?.id ? '✏️ Cập nhật tenant' : '➕ Tạo tenant mới'}</h3>
+      <div className="admin-form__grid">
+        <div className="input-group"><label className="input-label">Tên tenant *</label><input className="input" value={form.name} onChange={change('name')} required /></div>
+        <div className="input-group"><label className="input-label">Domain *</label><input className="input" value={form.domain} onChange={change('domain')} placeholder="academy.example.com" required /></div>
+        <div className="input-group admin-form__full"><label className="input-label">Logo URL (mock upload)</label><input className="input" value={form.logoUrl} onChange={change('logoUrl')} placeholder="https://..." /></div>
+        <div className="input-group"><label className="input-label">Trạng thái</label><Dropdown value={form.status} options={[{ value: 'active', label: 'Active' }, { value: 'draft', label: 'Draft' }, { value: 'archived', label: 'Archived' }]} onChange={(value) => setForm((prev) => ({ ...prev, status: value }))} /></div>
+      </div>
+
+      <h4 style={{ marginTop: 10, marginBottom: 8 }}>Theme</h4>
+      <div className="admin-form__grid">
+        <div className="input-group"><label className="input-label">Primary</label><input className="input" type="color" value={form.theme.primaryColor} onChange={changeTheme('primaryColor')} /></div>
+        <div className="input-group"><label className="input-label">Secondary</label><input className="input" type="color" value={form.theme.secondaryColor} onChange={changeTheme('secondaryColor')} /></div>
+        <div className="input-group"><label className="input-label">Background</label><input className="input" type="color" value={form.theme.backgroundColor} onChange={changeTheme('backgroundColor')} /></div>
+        <div className="input-group"><label className="input-label">Text</label><input className="input" type="color" value={form.theme.textColor} onChange={changeTheme('textColor')} /></div>
+      </div>
+
+      <h4 style={{ marginTop: 10, marginBottom: 8 }}>Typography</h4>
+      <div className="admin-form__grid">
+        <div className="input-group"><label className="input-label">Font family</label><input className="input" value={form.typography.fontFamily} onChange={changeTypography('fontFamily')} /></div>
+        <div className="input-group"><label className="input-label">Heading style</label><input className="input" value={form.typography.headingStyle} onChange={changeTypography('headingStyle')} /></div>
+        <div className="input-group"><label className="input-label">Body style</label><input className="input" value={form.typography.bodyStyle} onChange={changeTypography('bodyStyle')} /></div>
+      </div>
+
+      <div className="admin-form__actions">
+        <button type="button" className="btn btn--secondary" onClick={onClose}>Huỷ</button>
+        <button type="submit" className="btn btn--primary">✅ Lưu tenant</button>
+      </div>
+    </form>
+  );
+}
+
+TenantForm.propTypes = {
+  initialValue: PropTypes.shape({
+    id: PropTypes.string,
+    name: PropTypes.string,
+    domain: PropTypes.string,
+    logoUrl: PropTypes.string,
+    status: PropTypes.string,
+    theme: PropTypes.shape({
+      primaryColor: PropTypes.string,
+      secondaryColor: PropTypes.string,
+      backgroundColor: PropTypes.string,
+      textColor: PropTypes.string,
+    }),
+    typography: PropTypes.shape({
+      fontFamily: PropTypes.string,
+      headingStyle: PropTypes.string,
+      bodyStyle: PropTypes.string,
+    }),
+  }),
+  onClose: PropTypes.func.isRequired,
+  onSubmit: PropTypes.func.isRequired,
+};
+
 export default function AdminDashboard() {
   const { user } = useAuth();
   const { toast, showToast } = useToast();
@@ -72,9 +156,21 @@ export default function AdminDashboard() {
     courseProgressReport: fallbackCourseProgress,
     quizResults: fallbackQuizResults,
     auditLogs: fallbackAuditLogs,
+    assignments: [],
+    tenants: fallbackTenants,
   });
   const [showUserModal, setShowUserModal] = useState(false);
   const [showCourseModal, setShowCourseModal] = useState(false);
+  const [showTenantModal, setShowTenantModal] = useState(false);
+  const [editingTenant, setEditingTenant] = useState(null);
+  const [assignmentForm, setAssignmentForm] = useState({
+    courseId: '',
+    scope: 'user',
+    userId: '',
+    department: '',
+    dueDate: '',
+    required: true,
+  });
   const [reloadTick, setReloadTick] = useState(0);
   const lastSyncAtRef = useRef(0);
 
@@ -104,12 +200,13 @@ export default function AdminDashboard() {
           courseProgressReport: response.courseProgressReport || fallbackCourseProgress,
           quizResults: response.quizResults || fallbackQuizResults,
           auditLogs: response.auditLogs || fallbackAuditLogs,
+          assignments: response.assignments || [],
+          tenants: response.tenants || fallbackTenants,
         });
       } catch {
         // keep fallback
       } finally {
-        if (!mounted) return;
-        setLoading(false);
+        if (mounted) setLoading(false);
       }
     }
     load();
@@ -169,13 +266,61 @@ export default function AdminDashboard() {
     }
   };
 
+  const handleSaveTenant = async (form) => {
+    try {
+      if (editingTenant?.id) {
+        const response = await updateTenant(editingTenant.id, form);
+        setData((prev) => ({
+          ...prev,
+          tenants: prev.tenants.map((tenant) => (tenant.id === editingTenant.id ? response.tenant : tenant)),
+        }));
+        showToast('✅ Đã cập nhật tenant');
+      } else {
+        const response = await createTenant(form);
+        setData((prev) => ({ ...prev, tenants: [...prev.tenants, response.tenant] }));
+        showToast('✅ Đã tạo tenant');
+      }
+      setShowTenantModal(false);
+      setEditingTenant(null);
+    } catch (error) {
+      showToast(error?.message || '❌ Không thể lưu tenant');
+    }
+  };
+
+  useEffect(() => {
+    const learners = data.users.filter((item) => item.role === 'learner');
+    if (!assignmentForm.courseId && data.courses[0]?.id) {
+      setAssignmentForm((prev) => ({ ...prev, courseId: data.courses[0].id }));
+    }
+    if (!assignmentForm.userId && learners[0]?.id) {
+      setAssignmentForm((prev) => ({ ...prev, userId: learners[0].id }));
+    }
+    if (!assignmentForm.department && learners[0]?.department) {
+      setAssignmentForm((prev) => ({ ...prev, department: learners[0].department }));
+    }
+  }, [assignmentForm.courseId, assignmentForm.department, assignmentForm.userId, data.courses, data.users]);
+
+  const handleAssignCourse = async () => {
+    if (!assignmentForm.courseId) return showToast('⚠️ Vui lòng chọn khoá học');
+    if (assignmentForm.scope === 'user' && !assignmentForm.userId) return showToast('⚠️ Vui lòng chọn học viên');
+    if (assignmentForm.scope === 'department' && !assignmentForm.department) return showToast('⚠️ Vui lòng chọn phòng ban');
+    try {
+      const response = await assignCourseByAdmin(assignmentForm);
+      const created = Array.isArray(response.assignments) ? response.assignments : [];
+      setData((prev) => ({ ...prev, assignments: [...created, ...(prev.assignments || [])] }));
+      showToast(`✅ Đã phân phối ${created.length} lượt gán`);
+    } catch (error) {
+      showToast(error?.message || '❌ Không thể phân phối khoá học');
+    }
+  };
+
   if (loading) return <AdminLayout title="Quản trị hệ thống"><div className="skeleton skeleton-card" /></AdminLayout>;
 
   return (
     <AdminLayout title="Quản trị hệ thống">
       <div className="admin-header"><div><h2 className="admin-header__greeting">Xin chào, {user?.name}</h2><p className="admin-header__role">Vai trò: Quản trị hệ thống</p></div></div>
       <div className="tabs">
-        {[{ key: 'overview', label: '📊 Tổng quan' }, { key: 'users', label: '👥 Người dùng' }, { key: 'courses', label: '📚 Khoá học' }, { key: 'reports', label: '📈 Báo cáo' }, { key: 'certificates', label: '🎓 Chứng chỉ' }, { key: 'audit', label: '📋 Nhật ký' }, { key: 'settings', label: '⚙️ Cài đặt' }].map((item) => <button key={item.key} className={`tab${tab === item.key ? ' tab--active' : ''}`} onClick={() => changeTab(item.key)}>{item.label}</button>)}
+        {[{ key: 'overview', label: '📊 Tổng quan' }, { key: 'users', label: '👥 Người dùng' }, { key: 'courses', label: '📚 Khoá học' }, { key: 'distribution', label: '📤 Phân phối' }, { key: 'tenants', label: '🏢 Tenant' }, { key: 'reports', label: '📈 Báo cáo' }, { key: 'certificates', label: '🎓 Chứng chỉ' }, { key: 'audit', label: '📋 Nhật ký' }, { key: 'settings', label: '⚙️ Cài đặt' }].map((item) => <button key={item.key} className={`tab${tab === item.key ? ' tab--active' : ''}`} onClick={() => changeTab(item.key)}>{item.label}</button>)}
       </div>
 
       {tab === 'overview' && (
@@ -219,6 +364,103 @@ export default function AdminDashboard() {
         />
       )}
 
+      {tab === 'distribution' && (
+        <div>
+          <div className="card" style={{ marginBottom: 16 }}>
+            <h3 className="card__title" style={{ marginBottom: 12 }}>Phân phối khoá học</h3>
+            <div className="admin-form__grid">
+              <div className="input-group">
+                <label className="input-label">Khoá học</label>
+                <select className="input" value={assignmentForm.courseId} onChange={(event) => setAssignmentForm((prev) => ({ ...prev, courseId: event.target.value }))}>
+                  {data.courses.map((course) => <option key={course.id} value={course.id}>{course.title}</option>)}
+                </select>
+              </div>
+              <div className="input-group">
+                <label className="input-label">Kiểu phân phối</label>
+                <select className="input" value={assignmentForm.scope} onChange={(event) => setAssignmentForm((prev) => ({ ...prev, scope: event.target.value }))}>
+                  <option value="user">Theo học viên</option>
+                  <option value="department">Theo phòng ban</option>
+                </select>
+              </div>
+              {assignmentForm.scope === 'user' ? (
+                <div className="input-group">
+                  <label className="input-label">Học viên</label>
+                  <select className="input" value={assignmentForm.userId} onChange={(event) => setAssignmentForm((prev) => ({ ...prev, userId: event.target.value }))}>
+                    {data.users.filter((item) => item.role === 'learner').map((item) => (
+                      <option key={item.id} value={item.id}>{item.name} - {item.department}</option>
+                    ))}
+                  </select>
+                </div>
+              ) : (
+                <div className="input-group">
+                  <label className="input-label">Phòng ban</label>
+                  <select className="input" value={assignmentForm.department} onChange={(event) => setAssignmentForm((prev) => ({ ...prev, department: event.target.value }))}>
+                    {[...new Set(data.users.filter((item) => item.role === 'learner').map((item) => item.department).filter(Boolean))].map((department) => (
+                      <option key={department} value={department}>{department}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
+              <div className="input-group">
+                <label className="input-label">Hạn hoàn thành</label>
+                <input className="input" type="date" value={assignmentForm.dueDate} onChange={(event) => setAssignmentForm((prev) => ({ ...prev, dueDate: event.target.value }))} />
+              </div>
+            </div>
+            <label style={{ display: 'inline-flex', alignItems: 'center', gap: 8, marginTop: 8, marginBottom: 12 }}>
+              <input type="checkbox" checked={assignmentForm.required} onChange={(event) => setAssignmentForm((prev) => ({ ...prev, required: event.target.checked }))} />
+              Bắt buộc hoàn thành
+            </label>
+            <div>
+              <button className="btn btn--primary" onClick={handleAssignCourse}>📤 Phân phối</button>
+            </div>
+          </div>
+
+          <div className="card">
+            <h3 className="card__title" style={{ marginBottom: 12 }}>Lịch sử phân phối ({(data.assignments || []).length})</h3>
+            {(data.assignments || []).slice(0, 20).map((assignment) => (
+              <div key={assignment.id} style={{ padding: '10px 0', borderBottom: '1px solid var(--color-border)' }}>
+                <div style={{ fontWeight: 700 }}>{assignment.courseName}</div>
+                <div style={{ fontSize: 13, color: 'var(--color-text-muted)' }}>
+                  {assignment.userName} · Hạn: {assignment.dueDate || 'Không hạn'} · {assignment.required ? 'Bắt buộc' : 'Tự chọn'}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {tab === 'tenants' && (
+        <div>
+          <div className="admin-toolbar">
+            <h3 className="admin-toolbar__title">Quản lý tenant ({data.tenants.length})</h3>
+            <button className="btn btn--primary" onClick={() => { setEditingTenant(null); setShowTenantModal(true); }}>+ Tạo tenant</button>
+          </div>
+          <div className="grid-2">
+            {data.tenants.map((tenant) => (
+              <div key={tenant.id} className="card">
+                <div style={{ display: 'flex', gap: 10, alignItems: 'center', marginBottom: 8 }}>
+                  <img src={tenant.logoUrl || 'https://dummyimage.com/64x64/e2e8f0/94a3b8&text=T'} alt={tenant.name} style={{ width: 44, height: 44, borderRadius: 10, objectFit: 'cover' }} />
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontWeight: 700 }}>{tenant.name}</div>
+                    <div style={{ fontSize: 12, color: 'var(--color-text-muted)' }}>{tenant.domain}</div>
+                  </div>
+                  <span className={`badge ${tenant.status === 'active' ? 'badge--success' : (tenant.status === 'draft' ? 'badge--warning' : 'badge--neutral')}`}>{tenant.status}</span>
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0,1fr))', gap: 8, marginBottom: 10 }}>
+                  {[tenant.theme?.primaryColor, tenant.theme?.secondaryColor, tenant.theme?.backgroundColor, tenant.theme?.textColor].map((color, idx) => (
+                    <div key={`${tenant.id}_color_${idx}`} style={{ height: 24, borderRadius: 8, background: color || '#E2E8F0', border: '1px solid var(--color-border)' }} />
+                  ))}
+                </div>
+                <div style={{ fontSize: 12, color: 'var(--color-text-muted)', marginBottom: 10 }}>
+                  Font: {tenant.typography?.fontFamily} · Heading: {tenant.typography?.headingStyle} · Body: {tenant.typography?.bodyStyle}
+                </div>
+                <button className="btn btn--secondary btn--sm" onClick={() => { setEditingTenant(tenant); setShowTenantModal(true); }}>✏️ Chỉnh sửa</button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       {tab === 'reports' && <div>
         <div className="card" style={{ marginBottom: 16 }}><h3 className="card__title">Tiến độ khoá học</h3>{data.courseProgressReport.map((course) => { const percent = course.enrolled ? Math.round((course.completed / course.enrolled) * 100) : 0; return <div key={course.courseId} className="chart-bar-row"><div className="chart-bar-label">{course.courseName}</div><div className="chart-bar-track"><div className="chart-bar-fill progress-bar__fill--success" style={{ width: `${percent}%` }} /></div><div className="chart-bar-value">{percent}%</div></div>; })}</div>
         <div className="card" style={{ marginBottom: 16 }}><h3 className="card__title">Kết quả Quiz</h3>{data.quizResults.map((quiz) => <div key={quiz.quizId} className="chart-bar-row"><div className="chart-bar-label">{quiz.quizName}</div><div className="chart-bar-track"><div className="chart-bar-fill progress-bar__fill--success" style={{ width: `${quiz.passRate}%` }} /></div><div className="chart-bar-value">{quiz.passRate}%</div></div>)}</div>
@@ -236,7 +478,13 @@ export default function AdminDashboard() {
       <Modal open={showCourseModal} onClose={() => setShowCourseModal(false)}>
         <AddCourseForm onClose={() => setShowCourseModal(false)} onSubmit={handleCreateCourse} />
       </Modal>
+      <Modal open={showTenantModal} onClose={() => { setShowTenantModal(false); setEditingTenant(null); }}>
+        <TenantForm initialValue={editingTenant} onClose={() => { setShowTenantModal(false); setEditingTenant(null); }} onSubmit={handleSaveTenant} />
+      </Modal>
       {toast && <div className="toast">{toast}</div>}
     </AdminLayout>
   );
 }
+
+
+

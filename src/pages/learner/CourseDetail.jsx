@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+﻿import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { COURSE_STATUS, courses as fallbackCourses, getCourseProgress, getUnlockedModules } from '../../data/mockCourses.js';
 import { getLearningState, completeModule, completeCourse } from '../../utils/auth.js';
@@ -9,6 +9,30 @@ import Modal from '../../components/common/Modal.jsx';
 
 function isModuleDone(mod, completedItems) {
   return mod.items.every((item) => completedItems.includes(item.id) || completedItems.includes(item.contentId));
+}
+
+const ITEM_TYPE_META = {
+  flashcard: { icon: '🗂️', label: 'Flashcard' },
+  video: { icon: '🎬', label: 'Video' },
+  audio: { icon: '🎧', label: 'Audio' },
+  quiz: { icon: '📝', label: 'Quiz' },
+  quiz_mc: { icon: '📝', label: 'Quiz' },
+  quiz_sequence: { icon: '📝', label: 'Quiz' },
+  roleplay: { icon: '🎭', label: 'Roleplay' },
+  lesson_reading: { icon: '📖', label: 'Reading' },
+  assignment: { icon: '📌', label: 'Assignment' },
+  survey: { icon: '🗳️', label: 'Survey' },
+  live_session: { icon: '📅', label: 'Live Session' },
+};
+
+function bracketTitle(item) {
+  const meta = ITEM_TYPE_META[item.type] || { label: 'Content' };
+  const title = String(item?.title || '');
+  if (title.toLowerCase().startsWith(`[${meta.label.toLowerCase()}]`)) return title;
+  if (title.toLowerCase().startsWith(`${meta.label.toLowerCase()}:`)) {
+    return `[${meta.label}] ${title.slice(meta.label.length + 1).trim()}`;
+  }
+  return `[${meta.label}] ${title}`;
 }
 
 export default function CourseDetail() {
@@ -78,11 +102,24 @@ export default function CourseDetail() {
     return () => { mounted = false; };
   }, [courseId, refreshKey]);
 
-  if (loading) return <LearnerLayout topBar={<div className="page__header"><div className="page__title">Đang tải...</div></div>}><PageSkeleton /></LearnerLayout>;
-  if (!course) return <LearnerLayout topBar={<div className="page__header"><div className="page__title">Không tìm thấy</div></div>}><div className="empty-state"><div className="empty-state__icon">🔍</div><div className="empty-state__title">Khoá học không tồn tại</div></div></LearnerLayout>;
+  if (loading) {
+    return <LearnerLayout topBar={<div className="page__header"><div className="page__title">Đang tải...</div></div>}><PageSkeleton /></LearnerLayout>;
+  }
+
+  if (!course) {
+    return (
+      <LearnerLayout topBar={<div className="page__header"><div className="page__title">Không tìm thấy</div></div>}>
+        <div className="empty-state">
+          <div className="empty-state__icon">🔍</div>
+          <div className="empty-state__title">Khóa học không tồn tại</div>
+        </div>
+      </LearnerLayout>
+    );
+  }
 
   const progress = course.progress ?? getCourseProgress(course, ls?.completedItems || []);
   const unlocked = getUnlockedModules(course, ls?.completedModules || []);
+  const hasRequiredTag = (course.tags || []).some((tag) => String(tag || '').trim().toLowerCase() === 'bắt buộc');
 
   const goToItem = (item, moduleId) => {
     const base = {
@@ -107,8 +144,11 @@ export default function CourseDetail() {
       <div className="card" style={{ marginBottom: 20 }}>
         <p style={{ fontSize: 14, color: 'var(--color-text-secondary)', marginBottom: 12 }}>{course.description}</p>
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 12 }}>
-          {(course.tags || []).map((tag) => <span key={tag} className="chip">{tag}</span>)}
-          {course.required && <span className="badge badge--warning">Bắt buộc</span>}
+          {(course.tags || [])
+            .filter((tag) => !course.required || String(tag || '').trim().toLowerCase() !== 'bắt buộc')
+            .map((tag) => <span key={tag} className="chip">{tag}</span>)}
+          {course.required && !hasRequiredTag && <span className="badge badge--warning">Bắt buộc</span>}
+          {course.required && hasRequiredTag && <span className="badge badge--warning">Bắt buộc</span>}
         </div>
         <div style={{ fontSize: 13, color: 'var(--color-text-muted)' }}>⏱ {course.duration} phút · 📦 {course.moduleCount} module · ⭐ {course.rating}</div>
         {course.dueDate && <div style={{ fontSize: 12, color: 'var(--color-warning)', marginTop: 4 }}>⏰ Hạn: {new Date(course.dueDate).toLocaleDateString('vi-VN')}</div>}
@@ -120,7 +160,7 @@ export default function CourseDetail() {
         }}>{progress === 100 ? '✅ Đã hoàn thành' : (progress === 0 ? '🚀 Bắt đầu học' : 'Tiếp tục học')}</button>
       </div>
 
-      <h3 style={{ fontSize: 18, fontWeight: 700, marginBottom: 12 }}>Nội dung khoá học</h3>
+      <h3 style={{ fontSize: 18, fontWeight: 700, marginBottom: 12 }}>Nội dung khóa học</h3>
       {course.modules.map((mod, idx) => {
         const open = unlocked.includes(mod.id);
         return (
@@ -131,14 +171,16 @@ export default function CourseDetail() {
             </div>
             {open && mod.items.map((item) => {
               const done = (ls?.completedItems || []).includes(item.id);
+              const meta = ITEM_TYPE_META[item.type] || { icon: '📄' };
               return (
                 <div key={item.id} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 0', borderTop: '1px solid var(--color-divider)' }}>
-                  <span>{done ? '✅' : '○'}</span><span style={{ flex: 1, fontSize: 13 }}>{item.title}</span>
+                  <span>{done ? '✅' : '○'}</span>
+                  <span style={{ flex: 1, minWidth: 0, fontSize: 13, overflowWrap: 'anywhere' }}>{meta.icon} {bracketTitle(item)}</span>
                   <button className="btn btn--ghost btn--sm" onClick={() => goToItem(item, mod.id)}>{done ? 'Xem lại' : 'Học'} →</button>
                 </div>
               );
             })}
-            {!open && <div style={{ fontSize: 12, color: 'var(--color-text-muted)', fontStyle: 'italic' }}>Hoàn thành module trước để mở khoá</div>}
+            {!open && <div style={{ fontSize: 12, color: 'var(--color-text-muted)', fontStyle: 'italic' }}>Hoàn thành module trước để mở khóa</div>}
           </div>
         );
       })}

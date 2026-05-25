@@ -9,6 +9,17 @@ import { useLessonDirty } from '../../hooks/useLessonGuard.jsx';
 import LearnerLayout from '../../components/layout/LearnerLayout.jsx';
 import LeaveConfirmModal from '../../components/common/LeaveConfirmModal.jsx';
 
+function normalizeVietnameseText(value) {
+  const text = String(value || '');
+  if (!/Ã|Â|Ä|Æ|á»|âœ|â€|ðŸ|�/.test(text)) return text;
+  try {
+    const bytes = Uint8Array.from(Array.from(text).map((char) => char.charCodeAt(0) & 0xff));
+    return new TextDecoder('utf-8').decode(bytes);
+  } catch {
+    return text;
+  }
+}
+
 function fallbackCompleteByCourse({ itemId, moduleId, courseId, xpAmount }) {
   completeItem(itemId, xpAmount);
   if (!moduleId || !courseId) return;
@@ -197,7 +208,7 @@ export default function QuizScreen() {
 
     navigate('/learner/quiz-result', {
       state: {
-        quizTitle: content.title,
+        quizTitle: normalizeVietnameseText(content.title),
         score,
         total,
         answers,
@@ -222,11 +233,11 @@ export default function QuizScreen() {
     : [Number(question?.correctIndex || 0)];
 
   return (
-    <LearnerLayout topBar={<div className="page__header"><button className="btn btn--ghost btn--sm" onClick={handleBack} style={{ marginBottom: 8 }}>← Quay lại</button><div className="page__title">{content.title}</div><div style={{ fontSize: 13, color: timeLeft < 30 ? 'var(--color-danger)' : 'var(--color-text-muted)', fontWeight: timeLeft < 30 ? 700 : 400 }}>⏱ {fmt(timeLeft)}</div></div>}>
+    <LearnerLayout topBar={<div className="page__header"><button className="btn btn--ghost btn--sm" onClick={handleBack} style={{ marginBottom: 8 }}>← Quay lại</button><div className="page__title">{normalizeVietnameseText(content.title)}</div><div style={{ fontSize: 13, color: timeLeft < 30 ? 'var(--color-danger)' : 'var(--color-text-muted)', fontWeight: timeLeft < 30 ? 700 : 400 }}>⏱ {fmt(timeLeft)}</div></div>}>
       <div style={{ padding: 16 }}>
         <div className="progress-bar" style={{ marginBottom: 20 }}><div className="progress-bar__fill" style={{ width: `${((qIdx + (showResult ? 1 : 0)) / content.questions.length) * 100}%` }} /></div>
         <p style={{ fontSize: 12, color: 'var(--color-text-muted)', marginBottom: 12 }}>Câu {qIdx + 1}/{content.questions.length}</p>
-        <h3 style={{ fontSize: 18, fontWeight: 700, marginBottom: 20, lineHeight: 1.5 }}>{question.question || question.prompt}</h3>
+        <h3 style={{ fontSize: 18, fontWeight: 700, marginBottom: 20, lineHeight: 1.5 }}>{normalizeVietnameseText(question.question || question.prompt)}</h3>
 
         {qType !== 'short_answer' && qType !== 'ordering' && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
@@ -247,7 +258,7 @@ export default function QuizScreen() {
               return (
                 <button key={i} className="btn" style={{ background: bg, border, justifyContent: 'flex-start', fontSize: 14, fontWeight: 500, textAlign: 'left', padding: '12px 16px', borderRadius: 'var(--radius-md)', whiteSpace: 'normal', wordBreak: 'break-word', lineHeight: 1.4 }}
                   onClick={() => toggleOption(i)} disabled={showResult}>
-                  <span style={{ marginRight: 8, fontWeight: 700 }}>{['A', 'B', 'C', 'D'][i] || `${i + 1}`}. </span> {opt}
+                  <span style={{ marginRight: 8, fontWeight: 700 }}>{['A', 'B', 'C', 'D'][i] || `${i + 1}`}. </span> {normalizeVietnameseText(opt)}
                 </button>
               );
             })}
@@ -259,7 +270,7 @@ export default function QuizScreen() {
             {orderingItems.map((item, idx) => (
               <div key={item.id} className="card" style={{ display: 'grid', gridTemplateColumns: '32px 1fr auto auto', gap: 8, alignItems: 'center', padding: 10 }}>
                 <span style={{ fontWeight: 700, color: 'var(--color-text-muted)' }}>{idx + 1}</span>
-                <span>{item.text}</span>
+                <span>{normalizeVietnameseText(item.text)}</span>
                 <button className="btn btn--ghost btn--sm" onClick={() => moveOrdering(idx, -1)} disabled={showResult || idx === 0}>↑</button>
                 <button className="btn btn--ghost btn--sm" onClick={() => moveOrdering(idx, 1)} disabled={showResult || idx === orderingItems.length - 1}>↓</button>
               </div>
@@ -280,7 +291,7 @@ export default function QuizScreen() {
           </button>
         )}
 
-        {showResult && <div style={{ marginTop: 16, padding: 12, background: 'var(--color-secondary-light)', borderRadius: 'var(--radius-md)', fontSize: 13, color: 'var(--color-text-secondary)' }}>{question.explanation}</div>}
+        {showResult && <div style={{ marginTop: 16, padding: 12, background: 'var(--color-secondary-light)', borderRadius: 'var(--radius-md)', fontSize: 13, color: 'var(--color-text-secondary)' }}>{normalizeVietnameseText(question.explanation)}</div>}
         {showResult && <button className="btn btn--primary btn--lg btn--full" style={{ marginTop: 20 }} onClick={next}>{qIdx < content.questions.length - 1 ? 'Câu tiếp theo →' : 'Xem kết quả'}</button>}
       </div>
       {toast && <div className="toast">{toast}</div>}

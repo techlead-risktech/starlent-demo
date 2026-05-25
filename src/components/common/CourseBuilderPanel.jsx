@@ -26,6 +26,17 @@ const ITEM_TYPE_OPTIONS = [
   { value: 'live_session', label: 'Live Session' },
 ];
 
+function normalizeVietnameseText(value) {
+  const text = String(value || '');
+  if (!/Ã|Â|Ä|Æ|á»|âœ|â€|ðŸ/.test(text)) return text;
+  try {
+    const bytes = Uint8Array.from(Array.from(text).map((char) => char.charCodeAt(0) & 0xff));
+    return new TextDecoder('utf-8').decode(bytes);
+  } catch {
+    return text;
+  }
+}
+
 export default function CourseBuilderPanel({
   courses,
   onCourseUpdated,
@@ -410,7 +421,7 @@ export default function CourseBuilderPanel({
                           </select>
                           <select className="input" value={editForm.contentId} onChange={(event) => setItemEditForm(item, { contentId: event.target.value })}>
                             <option value="">-- Chọn content --</option>
-                            {itemContentOptions.map((opt) => <option key={opt.id} value={opt.id}>{opt.id} - {opt.title}</option>)}
+                            {itemContentOptions.map((opt) => <option key={opt.id} value={opt.id}>{opt.id} - {normalizeVietnameseText(opt.title)}</option>)}
                           </select>
                           <input className="input" value={editForm.title} onChange={(event) => setItemEditForm(item, { title: event.target.value })} />
                           <button className="btn btn--ghost btn--sm" onClick={() => handleMoveItem(mod.id, item.id, -1)}>Lên</button>
@@ -433,7 +444,7 @@ export default function CourseBuilderPanel({
                   </select>
                   <select className="input" value={form.contentId} onChange={(event) => setItemForm(mod.id, { contentId: event.target.value })}>
                     <option value="">-- Chọn content --</option>
-                    {contentOptions.map((opt) => <option key={opt.id} value={opt.id}>{opt.id} - {opt.title}</option>)}
+                    {contentOptions.map((opt) => <option key={opt.id} value={opt.id}>{opt.id} - {normalizeVietnameseText(opt.title)}</option>)}
                   </select>
                   <input className="input" placeholder="Tiêu đề item (không bắt buộc)" value={form.title} onChange={(event) => setItemForm(mod.id, { title: event.target.value })} />
                   <button className="btn btn--secondary" onClick={() => handleAddItem(mod.id)}>+ Item</button>

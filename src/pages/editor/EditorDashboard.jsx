@@ -1,4 +1,5 @@
-﻿import { useEffect, useMemo, useRef, useState } from 'react';
+﻿/* eslint-disable react/prop-types */
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import AdminLayout from '../../components/layout/AdminLayout.jsx';
 import Modal from '../../components/common/Modal.jsx';
@@ -6,6 +7,7 @@ import AddCourseForm from '../../components/common/AddCourseForm.jsx';
 import CourseManagementSection from '../../components/common/CourseManagementSection.jsx';
 import { useAuth } from '../../hooks/useAuth.jsx';
 import { courses as fallbackCourses, COURSE_STATUS } from '../../data/mockCourses.js';
+import { users as fallbackUsers } from '../../data/mockUsers.js';
 import { useToast } from '../../hooks/useToast.js';
 import {
   createCourseByScope,
@@ -18,21 +20,46 @@ import {
   toggleCoursePublish,
   updateCourseContent,
 } from '../../api/services/courseManagement.js';
+import { assignCourseByEditor } from '../../api/services/distributionManagement.js';
 
 const STATE_SYNC_EVENT = 'starlent:state-sync';
 const STATE_SYNC_KEY = 'starlent_state_sync_v1';
 
 const CONTENT_TYPE_OPTIONS = [
-  { type: 'flashcard', label: 'Flashcard', icon: '🗂️' },
-  { type: 'video', label: 'Video', icon: '🎬' },
-  { type: 'audio', label: 'Audio', icon: '🎧' },
-  { type: 'quiz', label: 'Quiz', icon: '📝' },
-  { type: 'roleplay', label: 'Roleplay', icon: '🎭' },
-  { type: 'lesson_reading', label: 'Reading', icon: '📖' },
-  { type: 'assignment', label: 'Assignment', icon: '📌' },
-  { type: 'survey', label: 'Survey', icon: '🗳️' },
-  { type: 'live_session', label: 'Live Session', icon: '📅' },
+  { type: 'flashcard', label: 'Flashcard (Thẻ)', icon: '🗂️' },
+  { type: 'video', label: 'Video (Video)', icon: '🎬' },
+  { type: 'audio', label: 'Audio (Âm thanh)', icon: '🎧' },
+  { type: 'quiz', label: 'Quiz (Trắc nghiệm)', icon: '📝' },
+  { type: 'roleplay', label: 'Roleplay (Nhập vai)', icon: '🎭' },
+  { type: 'lesson_reading', label: 'Reading (Bài đọc)', icon: '📖' },
+  { type: 'assignment', label: 'Assignment (Bài tập)', icon: '📌' },
+  { type: 'survey', label: 'Survey (Khảo sát)', icon: '🗳️' },
+  { type: 'live_session', label: 'Live Session (Buổi học trực tiếp)', icon: '📅' },
 ];
+
+function normalizeVietnameseText(value) {
+  const text = String(value || '');
+  if (!/Ã|Â|Ä|Æ|á»|âœ|â€|ðŸ|�/.test(text)) return text;
+  try {
+    const bytes = Uint8Array.from(Array.from(text).map((char) => char.charCodeAt(0) & 0xff));
+    return new TextDecoder('utf-8').decode(bytes);
+  } catch {
+    return text;
+  }
+}
+
+function fmtSec(seconds) {
+  const value = Math.max(0, Math.floor(Number(seconds || 0)));
+  const m = Math.floor(value / 60);
+  const s = value % 60;
+  return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+}
+
+function formatCourseStatusLabel(status) {
+  if (status === COURSE_STATUS.PUBLISHED) return 'Đã xuất bản';
+  if (status === COURSE_STATUS.DRAFT) return 'Bản nháp';
+  return status;
+}
 
 function defaultDataByType(type) {
   switch (type) {
@@ -41,9 +68,40 @@ function defaultDataByType(type) {
         cards: [{ id: 'card_1', front: '', options: ['', '', '', ''], correctIndex: 0, explanation: '' }],
       };
     case 'video':
-      return { videoUrl: '', youtubeId: '', duration: 300, transcript: '', captions: '' };
+      return {
+        videoUrl: '',
+        youtubeId: '',
+        progressMode: 'lesson_duration',
+        duration: 30,
+        transcript: '',
+        captions: '',
+        transcriptSegments: [
+          { id: 'seg_1', startSec: 0, endSec: 9, text: '' },
+          { id: 'seg_2', startSec: 10, endSec: 14, text: '' },
+          { id: 'seg_3', startSec: 15, endSec: 22, text: '' },
+          { id: 'seg_4', startSec: 23, endSec: 30, text: '' },
+        ],
+        checkpoints: [
+          { id: 'cp_1', atSec: 10, question: '', options: ['', '', ''], correctIndex: 0 },
+          { id: 'cp_2', atSec: 15, question: '', options: ['', '', ''], correctIndex: 0 },
+        ],
+      };
     case 'audio':
-      return { audioUrl: '', duration: 300, transcript: '' };
+      return {
+        audioUrl: '',
+        duration: 30,
+        transcript: '',
+        transcriptSegments: [
+          { id: 'seg_1', startSec: 0, endSec: 9, text: '' },
+          { id: 'seg_2', startSec: 10, endSec: 14, text: '' },
+          { id: 'seg_3', startSec: 15, endSec: 22, text: '' },
+          { id: 'seg_4', startSec: 23, endSec: 30, text: '' },
+        ],
+        checkpoints: [
+          { id: 'cp_1', atSec: 10, question: '', options: ['', '', ''], correctIndex: 0 },
+          { id: 'cp_2', atSec: 15, question: '', options: ['', '', ''], correctIndex: 0 },
+        ],
+      };
     case 'quiz':
       return {
         type: 'multiple_choice',
@@ -81,19 +139,83 @@ function sanitizeDataByType(type, data) {
         })),
       };
     case 'video':
+      {
+        const duration = Math.max(0, Number(d.duration || 0));
+        const transcript = String(d.transcript || '');
+        const transcriptSegments = Array.isArray(d.transcriptSegments)
+          ? d.transcriptSegments.map((segment, idx) => ({
+            id: String(segment?.id || `seg_${idx + 1}`),
+            startSec: Math.max(0, Number(segment?.startSec || 0)),
+            endSec: Math.max(0, Number(segment?.endSec || 0)),
+            text: String(segment?.text || ''),
+          }))
+          : [];
       return {
         videoUrl: String(d.videoUrl || ''),
         youtubeId: String(d.youtubeId || ''),
-        duration: Math.max(0, Number(d.duration || 0)),
-        transcript: String(d.transcript || ''),
+        progressMode: String(d.progressMode || 'lesson_duration') === 'full_video_duration' ? 'full_video_duration' : 'lesson_duration',
+        duration,
+        transcript,
         captions: String(d.captions || ''),
+        transcriptSegments: transcriptSegments.length > 0
+          ? transcriptSegments
+          : [{
+            id: 'seg_1',
+            startSec: 0,
+            endSec: duration,
+            text: transcript,
+          }],
+        checkpoints: Array.isArray(d.checkpoints)
+          ? d.checkpoints.map((checkpoint, idx) => ({
+            id: String(checkpoint?.id || `cp_${idx + 1}`),
+            atSec: Math.max(0, Number(checkpoint?.atSec || 0)),
+            question: String(checkpoint?.question || ''),
+            options: Array.isArray(checkpoint?.options)
+              ? checkpoint.options.map((option) => String(option || ''))
+              : ['', '', ''],
+            correctIndex: Math.max(0, Number(checkpoint?.correctIndex || 0)),
+          }))
+          : [],
       };
+      }
     case 'audio':
+      {
+        const duration = Math.max(0, Number(d.duration || 0));
+        const transcript = String(d.transcript || '');
+        const transcriptSegments = Array.isArray(d.transcriptSegments)
+          ? d.transcriptSegments.map((segment, idx) => ({
+            id: String(segment?.id || `seg_${idx + 1}`),
+            startSec: Math.max(0, Number(segment?.startSec || 0)),
+            endSec: Math.max(0, Number(segment?.endSec || 0)),
+            text: String(segment?.text || ''),
+          }))
+          : [];
+
       return {
         audioUrl: String(d.audioUrl || ''),
-        duration: Math.max(0, Number(d.duration || 0)),
-        transcript: String(d.transcript || ''),
+        duration,
+        transcript,
+        transcriptSegments: transcriptSegments.length > 0
+          ? transcriptSegments
+          : [{
+            id: 'seg_1',
+            startSec: 0,
+            endSec: duration,
+            text: transcript,
+          }],
+        checkpoints: Array.isArray(d.checkpoints)
+          ? d.checkpoints.map((checkpoint, idx) => ({
+            id: String(checkpoint?.id || `cp_${idx + 1}`),
+            atSec: Math.max(0, Number(checkpoint?.atSec || 0)),
+            question: String(checkpoint?.question || ''),
+            options: Array.isArray(checkpoint?.options)
+              ? checkpoint.options.map((option) => String(option || ''))
+              : ['', '', ''],
+            correctIndex: Math.max(0, Number(checkpoint?.correctIndex || 0)),
+          }))
+          : [],
       };
+      }
     case 'quiz':
       return {
         type: 'multiple_choice',
@@ -178,27 +300,247 @@ function buildPayloadByType(type, data) {
   return d;
 }
 
+function AudioPreviewPanel({ data }) {
+  const duration = Math.max(0, Number(data?.duration || 0));
+  const segments = useMemo(() => (
+    Array.isArray(data?.transcriptSegments) ? data.transcriptSegments : []
+  ), [data?.transcriptSegments]);
+  const checkpoints = useMemo(() => (
+    Array.isArray(data?.checkpoints)
+      ? data.checkpoints
+        .map((checkpoint, idx) => ({
+          id: String(checkpoint?.id || `cp_${idx + 1}`),
+          atSec: Math.max(0, Number(checkpoint?.atSec || 0)),
+          question: String(checkpoint?.question || ''),
+          options: Array.isArray(checkpoint?.options) ? checkpoint.options : [],
+          correctIndex: Math.max(0, Number(checkpoint?.correctIndex || 0)),
+        }))
+        .sort((a, b) => a.atSec - b.atSec)
+      : []
+  ), [data?.checkpoints]);
+
+  const [playing, setPlaying] = useState(false);
+  const [speed, setSpeed] = useState(1);
+  const [time, setTime] = useState(0);
+  const [activeCheckpoint, setActiveCheckpoint] = useState(null);
+  const [answeredMap, setAnsweredMap] = useState({});
+  const triggeredRef = useRef(new Set());
+
+  useEffect(() => {
+    setPlaying(false);
+    setTime(0);
+    setSpeed(1);
+    setActiveCheckpoint(null);
+    setAnsweredMap({});
+    triggeredRef.current = new Set();
+  }, [data]);
+
+  useEffect(() => {
+    if (!playing || activeCheckpoint || time >= duration) return undefined;
+    const timer = setInterval(() => {
+      setTime((current) => Math.min(current + (0.5 * speed), duration));
+    }, 500);
+    return () => clearInterval(timer);
+  }, [playing, activeCheckpoint, time, duration, speed]);
+
+  useEffect(() => {
+    if (!playing || activeCheckpoint) return;
+    const target = checkpoints.find((checkpoint) => {
+      const key = `${checkpoint.id}_${checkpoint.atSec}`;
+      return time >= checkpoint.atSec && !triggeredRef.current.has(key);
+    });
+    if (!target) return;
+    triggeredRef.current.add(`${target.id}_${target.atSec}`);
+    setPlaying(false);
+    setActiveCheckpoint(target);
+  }, [time, checkpoints, playing, activeCheckpoint]);
+
+  const activeSegId = useMemo(() => (
+    segments.find((segment) => (
+      time >= Number(segment?.startSec || 0) && time <= Number(segment?.endSec || 0)
+    ))?.id || segments[segments.length - 1]?.id || null
+  ), [time, segments]);
+
+  const listenedPercent = duration > 0 ? Math.round((time / duration) * 100) : 0;
+
+  return (
+    <div className="card" style={{ marginTop: 12, background: '#F8FAFC' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+        <div style={{ fontWeight: 700, fontSize: 14 }}>Preview learner</div>
+        <div style={{ fontSize: 12, color: 'var(--color-text-muted)' }}>{fmtSec(time)} / {fmtSec(duration)}</div>
+      </div>
+      <div className="progress-bar" style={{ marginBottom: 10 }}><div className="progress-bar__fill" style={{ width: `${listenedPercent}%` }} /></div>
+      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 10 }}>
+        <button className="btn btn--secondary btn--sm" onClick={() => setTime((value) => Math.max(0, value - 5))}>-5s</button>
+        <button className="btn btn--primary btn--sm" onClick={() => setPlaying((value) => !value)}>{playing ? 'Pause' : 'Play'}</button>
+        <button className="btn btn--secondary btn--sm" onClick={() => setTime((value) => Math.min(duration, value + 5))}>+5s</button>
+        {[0.5, 1, 1.5, 2].map((value) => (
+          <button key={value} className={`btn btn--sm ${speed === value ? 'btn--primary' : 'btn--ghost'}`} onClick={() => setSpeed(value)}>
+            {value}x
+          </button>
+        ))}
+      </div>
+
+      {segments.map((segment, idx) => (
+        <button
+          key={segment.id || idx}
+          className="btn btn--ghost btn--full"
+          onClick={() => setTime(Math.max(0, Math.min(duration, Number(segment?.startSec || 0))))}
+          style={{
+            justifyContent: 'flex-start',
+            textAlign: 'left',
+            marginBottom: 6,
+            border: activeSegId === segment.id ? '1px solid var(--color-primary)' : '1px solid var(--color-border)',
+            background: activeSegId === segment.id ? 'var(--color-primary-light)' : 'transparent',
+          }}
+        >
+          <span style={{ fontSize: 11, color: 'var(--color-text-muted)', marginRight: 8 }}>
+            {Number(segment?.startSec || 0)}s
+          </span>
+          <span style={{ fontSize: 13 }}>{segment?.text || ''}</span>
+        </button>
+      ))}
+
+      {activeCheckpoint && (
+        <div className="card" style={{ marginTop: 8, background: '#FFF7ED', borderColor: '#FCD34D' }}>
+          <div style={{ fontSize: 12, fontWeight: 700, color: '#9A3412', marginBottom: 6 }}>
+            Checkpoint @ {activeCheckpoint.atSec}s
+          </div>
+          <div style={{ fontWeight: 600, marginBottom: 8 }}>{activeCheckpoint.question || '(Chưa nhập câu hỏi)'}</div>
+          {(activeCheckpoint.options || []).map((option, idx) => (
+            <button
+              key={`${activeCheckpoint.id}_${idx}`}
+              className="btn btn--secondary btn--full btn--sm"
+              style={{ marginBottom: 6 }}
+              onClick={() => {
+                const correct = idx === activeCheckpoint.correctIndex;
+                setAnsweredMap((prev) => ({ ...prev, [activeCheckpoint.id]: { selected: idx, correct } }));
+                setActiveCheckpoint(null);
+                setPlaying(true);
+              }}
+            >
+              {option || `(Đáp án ${idx + 1} trống)`}
+            </button>
+          ))}
+        </div>
+      )}
+
+      <div style={{ fontSize: 12, color: 'var(--color-text-muted)', marginTop: 8 }}>
+        Checkpoint đã trả lời: {Object.keys(answeredMap).length}/{checkpoints.length}
+      </div>
+    </div>
+  );
+}
+
 function ContentFields({ type, data, onChange }) {
   if (!type) return null;
 
   if (type === 'video') {
+    const segments = Array.isArray(data.transcriptSegments) ? data.transcriptSegments : [];
+    const checkpoints = Array.isArray(data.checkpoints) ? data.checkpoints : [];
     return (
-      <div className="admin-form__grid">
-        <div className="input-group admin-form__full"><label className="input-label">Video URL</label><input className="input" value={data.videoUrl || ''} onChange={(e) => onChange({ ...data, videoUrl: e.target.value })} /></div>
-        <div className="input-group"><label className="input-label">YouTube ID</label><input className="input" value={data.youtubeId || ''} onChange={(e) => onChange({ ...data, youtubeId: e.target.value })} /></div>
-        <div className="input-group"><label className="input-label">Thời lượng (giây)</label><input className="input" type="number" min="0" value={data.duration || 0} onChange={(e) => onChange({ ...data, duration: Number(e.target.value || 0) })} /></div>
-        <div className="input-group admin-form__full"><label className="input-label">Transcript</label><textarea className="input" rows={6} value={data.transcript || ''} onChange={(e) => onChange({ ...data, transcript: e.target.value })} /></div>
-        <div className="input-group admin-form__full"><label className="input-label">Captions</label><input className="input" value={data.captions || ''} onChange={(e) => onChange({ ...data, captions: e.target.value })} /></div>
+      <div>
+        <div className="admin-form__grid">
+          <div className="input-group admin-form__full"><label className="input-label">Video URL</label><input className="input" value={data.videoUrl || ''} onChange={(e) => onChange({ ...data, videoUrl: e.target.value })} /></div>
+          <div className="input-group"><label className="input-label">YouTube ID</label><input className="input" value={data.youtubeId || ''} onChange={(e) => onChange({ ...data, youtubeId: e.target.value })} /></div>
+          <div className="input-group"><label className="input-label">Chế độ tiến độ</label><select className="input" value={data.progressMode || 'lesson_duration'} onChange={(e) => onChange({ ...data, progressMode: e.target.value })}><option value="lesson_duration">Theo thời lượng bài học</option><option value="full_video_duration">Theo thời lượng video YouTube</option></select></div>
+          <div className="input-group"><label className="input-label">Thời lượng (giây)</label><input className="input" type="number" min="0" value={data.duration || 0} onChange={(e) => onChange({ ...data, duration: Number(e.target.value || 0) })} /></div>
+          <div className="input-group admin-form__full"><label className="input-label">Transcript tổng</label><textarea className="input" rows={4} value={data.transcript || ''} onChange={(e) => onChange({ ...data, transcript: e.target.value })} /></div>
+          <div className="input-group admin-form__full"><label className="input-label">Captions</label><input className="input" value={data.captions || ''} onChange={(e) => onChange({ ...data, captions: e.target.value })} /></div>
+        </div>
+
+        <div style={{ marginTop: 8 }}>
+          <div style={{ fontWeight: 700, marginBottom: 8 }}>Transcript theo thời gian</div>
+          {segments.map((segment, idx) => (
+            <div key={segment.id || idx} style={{ display: 'grid', gridTemplateColumns: '120px 120px 1fr auto', gap: 8, marginBottom: 8 }}>
+              <input className="input" type="number" min="0" value={segment.startSec ?? 0} onChange={(e) => onChange({ ...data, transcriptSegments: segments.map((item, i) => (i === idx ? { ...item, startSec: Number(e.target.value || 0) } : item)) })} placeholder="startSec" />
+              <input className="input" type="number" min="0" value={segment.endSec ?? 0} onChange={(e) => onChange({ ...data, transcriptSegments: segments.map((item, i) => (i === idx ? { ...item, endSec: Number(e.target.value || 0) } : item)) })} placeholder="endSec" />
+              <input className="input" value={segment.text || ''} onChange={(e) => onChange({ ...data, transcriptSegments: segments.map((item, i) => (i === idx ? { ...item, text: e.target.value } : item)) })} placeholder="Nội dung segment" />
+              <button className="btn btn--danger btn--sm" onClick={() => onChange({ ...data, transcriptSegments: segments.filter((_, i) => i !== idx) })}>Xoá</button>
+            </div>
+          ))}
+          <button className="btn btn--secondary btn--sm" onClick={() => onChange({ ...data, transcriptSegments: [...segments, { id: `seg_${segments.length + 1}`, startSec: 0, endSec: 0, text: '' }] })}>+ Segment</button>
+        </div>
+
+        <div style={{ marginTop: 10 }}>
+          <div style={{ fontWeight: 700, marginBottom: 8 }}>Checkpoint câu hỏi ngắn</div>
+          {checkpoints.map((checkpoint, idx) => (
+            <div key={checkpoint.id || idx} className="card" style={{ marginBottom: 8 }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '120px 1fr auto', gap: 8, marginBottom: 8 }}>
+                <input className="input" type="number" min="0" value={checkpoint.atSec ?? 0} onChange={(e) => onChange({ ...data, checkpoints: checkpoints.map((item, i) => (i === idx ? { ...item, atSec: Number(e.target.value || 0) } : item)) })} placeholder="atSec" />
+                <input className="input" value={checkpoint.question || ''} onChange={(e) => onChange({ ...data, checkpoints: checkpoints.map((item, i) => (i === idx ? { ...item, question: e.target.value } : item)) })} placeholder="Nội dung câu hỏi" />
+                <button className="btn btn--danger btn--sm" onClick={() => onChange({ ...data, checkpoints: checkpoints.filter((_, i) => i !== idx) })}>Xoá</button>
+              </div>
+              {(checkpoint.options || []).map((option, optionIdx) => (
+                <div key={optionIdx} style={{ display: 'grid', gridTemplateColumns: '80px 1fr', gap: 8, marginBottom: 6 }}>
+                  <span style={{ fontSize: 12, color: 'var(--color-text-muted)', alignSelf: 'center' }}>Đáp án {optionIdx + 1}</span>
+                  <input className="input" value={option || ''} onChange={(e) => onChange({ ...data, checkpoints: checkpoints.map((item, i) => (i === idx ? { ...item, options: (item.options || []).map((opt, oi) => (oi === optionIdx ? e.target.value : opt)) } : item)) })} />
+                </div>
+              ))}
+              <div className="input-group"><label className="input-label">Đáp án đúng</label>
+                <select className="input" value={checkpoint.correctIndex ?? 0} onChange={(e) => onChange({ ...data, checkpoints: checkpoints.map((item, i) => (i === idx ? { ...item, correctIndex: Number(e.target.value || 0) } : item)) })}>
+                  {(checkpoint.options || []).map((_, i) => <option key={i} value={i}>Đáp án {i + 1}</option>)}
+                </select>
+              </div>
+            </div>
+          ))}
+          <button className="btn btn--secondary btn--sm" onClick={() => onChange({ ...data, checkpoints: [...checkpoints, { id: `cp_${checkpoints.length + 1}`, atSec: 0, question: '', options: ['', '', ''], correctIndex: 0 }] })}>+ Checkpoint</button>
+        </div>
       </div>
     );
   }
 
   if (type === 'audio') {
+    const segments = Array.isArray(data.transcriptSegments) ? data.transcriptSegments : [];
+    const checkpoints = Array.isArray(data.checkpoints) ? data.checkpoints : [];
     return (
-      <div className="admin-form__grid">
-        <div className="input-group admin-form__full"><label className="input-label">Audio URL</label><input className="input" value={data.audioUrl || ''} onChange={(e) => onChange({ ...data, audioUrl: e.target.value })} /></div>
-        <div className="input-group"><label className="input-label">Thời lượng (giây)</label><input className="input" type="number" min="0" value={data.duration || 0} onChange={(e) => onChange({ ...data, duration: Number(e.target.value || 0) })} /></div>
-        <div className="input-group admin-form__full"><label className="input-label">Transcript</label><textarea className="input" rows={6} value={data.transcript || ''} onChange={(e) => onChange({ ...data, transcript: e.target.value })} /></div>
+      <div>
+        <div className="admin-form__grid">
+          <div className="input-group admin-form__full"><label className="input-label">Audio URL</label><input className="input" value={data.audioUrl || ''} onChange={(e) => onChange({ ...data, audioUrl: e.target.value })} /></div>
+          <div className="input-group"><label className="input-label">Thời lượng (giây)</label><input className="input" type="number" min="0" value={data.duration || 0} onChange={(e) => onChange({ ...data, duration: Number(e.target.value || 0) })} /></div>
+          <div className="input-group admin-form__full"><label className="input-label">Transcript tổng</label><textarea className="input" rows={4} value={data.transcript || ''} onChange={(e) => onChange({ ...data, transcript: e.target.value })} /></div>
+        </div>
+
+        <div style={{ marginTop: 8 }}>
+          <div style={{ fontWeight: 700, marginBottom: 8 }}>Transcript theo thời gian</div>
+          {segments.map((segment, idx) => (
+            <div key={segment.id || idx} style={{ display: 'grid', gridTemplateColumns: '120px 120px 1fr auto', gap: 8, marginBottom: 8 }}>
+              <input className="input" type="number" min="0" value={segment.startSec ?? 0} onChange={(e) => onChange({ ...data, transcriptSegments: segments.map((item, i) => (i === idx ? { ...item, startSec: Number(e.target.value || 0) } : item)) })} placeholder="startSec" />
+              <input className="input" type="number" min="0" value={segment.endSec ?? 0} onChange={(e) => onChange({ ...data, transcriptSegments: segments.map((item, i) => (i === idx ? { ...item, endSec: Number(e.target.value || 0) } : item)) })} placeholder="endSec" />
+              <input className="input" value={segment.text || ''} onChange={(e) => onChange({ ...data, transcriptSegments: segments.map((item, i) => (i === idx ? { ...item, text: e.target.value } : item)) })} placeholder="Nội dung segment" />
+              <button className="btn btn--danger btn--sm" onClick={() => onChange({ ...data, transcriptSegments: segments.filter((_, i) => i !== idx) })}>Xoá</button>
+            </div>
+          ))}
+          <button className="btn btn--secondary btn--sm" onClick={() => onChange({ ...data, transcriptSegments: [...segments, { id: `seg_${segments.length + 1}`, startSec: 0, endSec: 0, text: '' }] })}>+ Segment</button>
+        </div>
+
+        <div style={{ marginTop: 10 }}>
+          <div style={{ fontWeight: 700, marginBottom: 8 }}>Checkpoint câu hỏi ngắn</div>
+          {checkpoints.map((checkpoint, idx) => (
+            <div key={checkpoint.id || idx} className="card" style={{ marginBottom: 8 }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '120px 1fr auto', gap: 8, marginBottom: 8 }}>
+                <input className="input" type="number" min="0" value={checkpoint.atSec ?? 0} onChange={(e) => onChange({ ...data, checkpoints: checkpoints.map((item, i) => (i === idx ? { ...item, atSec: Number(e.target.value || 0) } : item)) })} placeholder="atSec" />
+                <input className="input" value={checkpoint.question || ''} onChange={(e) => onChange({ ...data, checkpoints: checkpoints.map((item, i) => (i === idx ? { ...item, question: e.target.value } : item)) })} placeholder="Nội dung câu hỏi" />
+                <button className="btn btn--danger btn--sm" onClick={() => onChange({ ...data, checkpoints: checkpoints.filter((_, i) => i !== idx) })}>Xoá</button>
+              </div>
+              {(checkpoint.options || []).map((option, optionIdx) => (
+                <div key={`${checkpoint.id || idx}_${optionIdx}`} style={{ display: 'grid', gridTemplateColumns: '120px 1fr', gap: 8, marginBottom: 6 }}>
+                  <span style={{ fontSize: 12, color: 'var(--color-text-muted)', alignSelf: 'center' }}>Đáp án {optionIdx + 1}</span>
+                  <input className="input" value={option || ''} onChange={(e) => onChange({ ...data, checkpoints: checkpoints.map((item, i) => (i === idx ? { ...item, options: (item.options || []).map((opt, oi) => (oi === optionIdx ? e.target.value : opt)) } : item)) })} />
+                </div>
+              ))}
+              <div className="input-group">
+                <label className="input-label">Đáp án đúng</label>
+                <select className="input" value={checkpoint.correctIndex ?? 0} onChange={(e) => onChange({ ...data, checkpoints: checkpoints.map((item, i) => (i === idx ? { ...item, correctIndex: Number(e.target.value || 0) } : item)) })}>
+                  {(checkpoint.options || []).map((_, optionIdx) => <option key={optionIdx} value={optionIdx}>Đáp án {optionIdx + 1}</option>)}
+                </select>
+              </div>
+            </div>
+          ))}
+          <button className="btn btn--secondary btn--sm" onClick={() => onChange({ ...data, checkpoints: [...checkpoints, { id: `cp_${checkpoints.length + 1}`, atSec: 0, question: '', options: ['', '', ''], correctIndex: 0 }] })}>+ Checkpoint</button>
+        </div>
+
+        <AudioPreviewPanel data={data} />
       </div>
     );
   }
@@ -236,11 +578,11 @@ function ContentFields({ type, data, onChange }) {
               <input className="input" value={q.id || ''} onChange={(e) => onChange({ ...data, questions: questions.map((it, i) => (i === idx ? { ...it, id: e.target.value } : it)) })} placeholder="id" />
               <input className="input" value={q.question || ''} onChange={(e) => onChange({ ...data, questions: questions.map((it, i) => (i === idx ? { ...it, question: e.target.value } : it)) })} placeholder="Câu hỏi" />
               <select className="input" value={q.questionType || 'single_choice'} onChange={(e) => onChange({ ...data, questions: questions.map((it, i) => (i === idx ? { ...it, questionType: e.target.value } : it)) })}>
-                <option value="single_choice">Single Choice</option>
-                <option value="multiple_select">Multiple Select</option>
-                <option value="ordering">Ordering</option>
-                <option value="true_false">True/False</option>
-                <option value="short_answer">Short Answer</option>
+                <option value="single_choice">Single Choice (Một đáp án đúng)</option>
+                <option value="multiple_select">Multiple Select (Nhiều đáp án đúng)</option>
+                <option value="ordering">Ordering (Sắp xếp thứ tự)</option>
+                <option value="true_false">True/False (Đúng/Sai)</option>
+                <option value="short_answer">Short Answer (Trả lời ngắn)</option>
               </select>
               <button className="btn btn--danger btn--sm" onClick={() => onChange({ ...data, questions: questions.filter((_, i) => i !== idx) })}>Xoá</button>
             </div>
@@ -379,6 +721,14 @@ export default function EditorDashboard() {
   const tab = params.get('tab') || 'overview';
   const [loading, setLoading] = useState(true);
   const [courses, setCourses] = useState(fallbackCourses);
+  const [learners, setLearners] = useState(fallbackUsers.filter((item) => item.role === 'learner'));
+  const [assignments, setAssignments] = useState([]);
+  const [assignmentForm, setAssignmentForm] = useState({
+    courseId: '',
+    userId: '',
+    dueDate: '',
+    required: true,
+  });
   const [showCourseModal, setShowCourseModal] = useState(false);
 
   const [catalogSummary, setCatalogSummary] = useState({});
@@ -465,11 +815,12 @@ export default function EditorDashboard() {
         const response = await getCourseManagementDashboard('editor');
         if (!mounted) return;
         setCourses(response.courses || fallbackCourses);
+        setLearners(response.users || fallbackUsers.filter((item) => item.role === 'learner'));
+        setAssignments(response.assignments || []);
       } catch {
         // keep fallback
       } finally {
-        if (!mounted) return;
-        setLoading(false);
+        if (mounted) setLoading(false);
       }
     }
     load();
@@ -484,6 +835,7 @@ export default function EditorDashboard() {
   useEffect(() => {
     if (tab !== 'content' || !activeContentType) return;
     loadContentList(activeContentType);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tab, activeContentType, reloadTick]);
 
   useEffect(() => {
@@ -539,6 +891,29 @@ export default function EditorDashboard() {
       showToast(response.course.status === COURSE_STATUS.PUBLISHED ? '✅ Đã xuất bản' : '↩️ Đã chuyển về nháp');
     } catch {
       showToast('⚠️ Không thể cập nhật trạng thái');
+    }
+  };
+
+  useEffect(() => {
+    const publishedCourses = courses.filter((course) => course.status === COURSE_STATUS.PUBLISHED);
+    if (!assignmentForm.courseId && publishedCourses[0]?.id) {
+      setAssignmentForm((prev) => ({ ...prev, courseId: publishedCourses[0].id }));
+    }
+    if (!assignmentForm.userId && learners[0]?.id) {
+      setAssignmentForm((prev) => ({ ...prev, userId: learners[0].id }));
+    }
+  }, [assignmentForm.courseId, assignmentForm.userId, courses, learners]);
+
+  const handleAssignCourse = async () => {
+    if (!assignmentForm.courseId) return showToast('⚠️ Chọn khoá học đã xuất bản');
+    if (!assignmentForm.userId) return showToast('⚠️ Chọn học viên');
+    try {
+      const response = await assignCourseByEditor(assignmentForm);
+      const created = Array.isArray(response.assignments) ? response.assignments : [];
+      setAssignments((prev) => [...created, ...prev]);
+      showToast('✅ Đã gán khoá học');
+    } catch (error) {
+      showToast(error?.message || '❌ Không thể gán khoá học');
     }
   };
 
@@ -633,7 +1008,7 @@ export default function EditorDashboard() {
       <p style={{ fontSize: 14, color: 'var(--color-text-muted)', marginBottom: 20 }}>Vai trò: Biên tập nội dung</p>
 
       <div className="tabs" style={{ marginBottom: 20 }}>
-        {[{ key: 'overview', label: '📊 Tổng quan' }, { key: 'courses', label: '📚 Khoá học' }, { key: 'content', label: '📝 Nội dung' }, { key: 'publish', label: '✅ Xuất bản' }].map((item) => (
+        {[{ key: 'overview', label: '📊 Tổng quan' }, { key: 'courses', label: '📚 Khoá học' }, { key: 'content', label: '📝 Nội dung' }, { key: 'publish', label: '✅ Xuất bản' }, { key: 'distribution', label: '📤 Phân phối' }].map((item) => (
           <button key={item.key} className={`tab${tab === item.key ? ' tab--active' : ''}`} onClick={() => changeTab(item.key)}>{item.label}</button>
         ))}
       </div>
@@ -650,7 +1025,7 @@ export default function EditorDashboard() {
             <div key={course.id} className="card card--hoverable" style={{ marginBottom: 8 }} onClick={() => openBuilderForCourse(course.id)}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <div><div style={{ fontWeight: 700 }}>{course.title}</div><div style={{ fontSize: 12, color: 'var(--color-text-muted)' }}>{course.moduleCount} module · {course.duration}p</div></div>
-                <span className={`badge ${course.status === COURSE_STATUS.PUBLISHED ? 'badge--success' : 'badge--warning'}`}>{course.status}</span>
+                <span className={`badge ${course.status === COURSE_STATUS.PUBLISHED ? 'badge--success' : 'badge--warning'}`}>{formatCourseStatusLabel(course.status)}</span>
               </div>
             </div>
           ))}
@@ -693,7 +1068,7 @@ export default function EditorDashboard() {
                   ) : (
                     contentItems.map((item) => (
                       <button key={item.id} className={`btn btn--full ${selectedContentId === item.id ? 'btn--primary' : 'btn--secondary'}`} style={{ marginBottom: 6, justifyContent: 'flex-start' }} onClick={() => loadContentDetail(activeContentType, item.id)}>
-                        {item.id} · {item.title}
+                        {item.id} · {normalizeVietnameseText(item.title)}
                       </button>
                     ))
                   )}
@@ -725,11 +1100,61 @@ export default function EditorDashboard() {
           {courses.map((course) => (
             <div key={course.id} className="card" style={{ marginBottom: 8 }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <div><div style={{ fontWeight: 700 }}>{course.title}</div><span className={`badge ${course.status === COURSE_STATUS.PUBLISHED ? 'badge--success' : 'badge--warning'}`}>{course.status}</span></div>
-                <button className={`btn btn--sm ${course.status === COURSE_STATUS.PUBLISHED ? 'btn--secondary' : 'btn--success'}`} onClick={() => togglePublish(course.id)}>{course.status === COURSE_STATUS.PUBLISHED ? 'Huỷ XB' : 'Xuất bản'}</button>
+                <div><div style={{ fontWeight: 700 }}>{course.title}</div><span className={`badge ${course.status === COURSE_STATUS.PUBLISHED ? 'badge--success' : 'badge--warning'}`}>{formatCourseStatusLabel(course.status)}</span></div>
+                <button className={`btn btn--sm ${course.status === COURSE_STATUS.PUBLISHED ? 'btn--secondary' : 'btn--success'}`} onClick={() => togglePublish(course.id)}>{course.status === COURSE_STATUS.PUBLISHED ? 'Hủy xuất bản' : 'Xuất bản'}</button>
               </div>
             </div>
           ))}
+        </div>
+      )}
+
+      {tab === 'distribution' && (
+        <div>
+          <div className="card" style={{ marginBottom: 16 }}>
+            <h3 className="card__title" style={{ marginBottom: 12 }}>Giao học viên (Editor)</h3>
+            <p style={{ fontSize: 13, color: 'var(--color-text-muted)', marginBottom: 12 }}>
+              Chỉ gán theo học viên và chỉ cho khoá học đã xuất bản.
+            </p>
+            <div className="admin-form__grid">
+              <div className="input-group">
+                <label className="input-label">Khoá học đã xuất bản</label>
+                <select className="input" value={assignmentForm.courseId} onChange={(event) => setAssignmentForm((prev) => ({ ...prev, courseId: event.target.value }))}>
+                  {courses.filter((course) => course.status === COURSE_STATUS.PUBLISHED).map((course) => (
+                    <option key={course.id} value={course.id}>{course.title}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="input-group">
+                <label className="input-label">Học viên</label>
+                <select className="input" value={assignmentForm.userId} onChange={(event) => setAssignmentForm((prev) => ({ ...prev, userId: event.target.value }))}>
+                  {learners.map((item) => <option key={item.id} value={item.id}>{item.name} - {item.department}</option>)}
+                </select>
+              </div>
+              <div className="input-group">
+                <label className="input-label">Hạn hoàn thành</label>
+                <input className="input" type="date" value={assignmentForm.dueDate} onChange={(event) => setAssignmentForm((prev) => ({ ...prev, dueDate: event.target.value }))} />
+              </div>
+            </div>
+            <label style={{ display: 'inline-flex', alignItems: 'center', gap: 8, marginTop: 8, marginBottom: 12 }}>
+              <input type="checkbox" checked={assignmentForm.required} onChange={(event) => setAssignmentForm((prev) => ({ ...prev, required: event.target.checked }))} />
+              Bắt buộc hoàn thành
+            </label>
+            <div>
+              <button className="btn btn--primary" onClick={handleAssignCourse}>📤 Giao học viên</button>
+            </div>
+          </div>
+
+          <div className="card">
+            <h3 className="card__title" style={{ marginBottom: 12 }}>Lịch sử gán ({assignments.length})</h3>
+            {assignments.slice(0, 20).map((assignment) => (
+              <div key={assignment.id} style={{ padding: '10px 0', borderBottom: '1px solid var(--color-border)' }}>
+                <div style={{ fontWeight: 700 }}>{assignment.courseName}</div>
+                <div style={{ fontSize: 13, color: 'var(--color-text-muted)' }}>
+                  {assignment.userName} · Hạn: {assignment.dueDate || 'Không hạn'} · {assignment.required ? 'Bắt buộc' : 'Tự chọn'}
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
       )}
 
@@ -756,3 +1181,5 @@ export default function EditorDashboard() {
     </AdminLayout>
   );
 }
+
+

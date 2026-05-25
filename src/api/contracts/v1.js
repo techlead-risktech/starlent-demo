@@ -44,6 +44,9 @@ export const API_V1 = {
     dashboard: '/admin/dashboard',
     createUser: '/admin/users',
     createCourse: '/admin/courses',
+    assignCourse: '/admin/assignments',
+    createTenant: '/admin/tenants',
+    updateTenant: (tenantId) => `/admin/tenants/${tenantId}`,
   },
   trainer: {
     dashboard: '/trainer/dashboard',
@@ -52,6 +55,7 @@ export const API_V1 = {
     dashboard: '/editor/dashboard',
     createCourse: '/editor/courses',
     togglePublish: (courseId) => `/editor/courses/${courseId}/publish`,
+    assignCourse: '/editor/assignments',
     contentCatalog: '/editor/content-catalog',
     contentCatalogByType: (type) => `/editor/content-catalog/${type}`,
     contentDetail: (type, contentId) => `/editor/content-catalog/${type}/${contentId}`,

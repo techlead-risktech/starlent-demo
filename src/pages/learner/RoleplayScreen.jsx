@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+﻿import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { getContentById } from '../../data/mockContent.js';
 import { completeItem } from '../../utils/auth.js';
@@ -7,6 +7,17 @@ import { useToast, usePreventLeave } from '../../hooks/useToast.js';
 import { useLessonDirty } from '../../hooks/useLessonGuard.jsx';
 import LearnerLayout from '../../components/layout/LearnerLayout.jsx';
 import LeaveConfirmModal from '../../components/common/LeaveConfirmModal.jsx';
+
+function normalizeVietnameseText(value) {
+  const text = String(value || '');
+  if (!/Ã|Â|Ä|Æ|á»|âœ|â€|ðŸ|�/.test(text)) return text;
+  try {
+    const bytes = Uint8Array.from(Array.from(text).map((char) => char.charCodeAt(0) & 0xff));
+    return new TextDecoder('utf-8').decode(bytes);
+  } catch {
+    return text;
+  }
+}
 
 export default function RoleplayScreen() {
   const { contentId } = useParams();
@@ -66,11 +77,11 @@ export default function RoleplayScreen() {
   if (!content) return <LearnerLayout topBar={<div className="page__header"><div className="page__title">Đang tải...</div></div>}><div className="empty-state">Đang tải...</div></LearnerLayout>;
 
   return (
-    <LearnerLayout topBar={<div className="page__header"><button className="btn btn--ghost btn--sm" onClick={handleBack} style={{ marginBottom: 8 }}>← Quay lại</button><div className="page__title">{content.title}</div></div>}>
+    <LearnerLayout topBar={<div className="page__header"><button className="btn btn--ghost btn--sm" onClick={handleBack} style={{ marginBottom: 8 }}>← Quay lại</button><div className="page__title">{normalizeVietnameseText(content.title)}</div></div>}>
       <div style={{ padding: 16 }}>
-        <div className="card" style={{ marginBottom: 16, background: '#FFF7ED', borderColor: '#FCD34D' }}><h4 style={{ fontSize: 15, fontWeight: 700, marginBottom: 8, color: '#92400E' }}>📋 Tình huống</h4><p style={{ fontSize: 14, color: 'var(--color-text-secondary)', lineHeight: 1.6 }}>{content.scenario}</p></div>
-        <div className="card" style={{ marginBottom: 16 }}><h4 style={{ fontSize: 15, fontWeight: 700, marginBottom: 8 }}>💡 Gợi ý</h4><p style={{ fontSize: 13, color: 'var(--color-text-secondary)', lineHeight: 1.6 }}>{content.suggestedResponse}</p>
-          {content.tips && <div style={{ marginTop: 12 }}><p style={{ fontSize: 12, fontWeight: 600, color: 'var(--color-text-muted)', marginBottom: 4 }}>Mẹo:</p>{content.tips.map((tip, i) => <div key={i} style={{ fontSize: 12, color: 'var(--color-text-muted)', padding: '2px 0' }}>• {tip}</div>)}</div>}
+        <div className="card" style={{ marginBottom: 16, background: '#FFF7ED', borderColor: '#FCD34D' }}><h4 style={{ fontSize: 15, fontWeight: 700, marginBottom: 8, color: '#92400E' }}>📋 Tình huống</h4><p style={{ fontSize: 14, color: 'var(--color-text-secondary)', lineHeight: 1.6 }}>{normalizeVietnameseText(content.scenario)}</p></div>
+        <div className="card" style={{ marginBottom: 16 }}><h4 style={{ fontSize: 15, fontWeight: 700, marginBottom: 8 }}>💡 Gợi ý</h4><p style={{ fontSize: 13, color: 'var(--color-text-secondary)', lineHeight: 1.6 }}>{normalizeVietnameseText(content.suggestedResponse)}</p>
+          {content.tips && <div style={{ marginTop: 12 }}><p style={{ fontSize: 12, fontWeight: 600, color: 'var(--color-text-muted)', marginBottom: 4 }}>Mẹo:</p>{content.tips.map((tip, i) => <div key={i} style={{ fontSize: 12, color: 'var(--color-text-muted)', padding: '2px 0' }}>• {normalizeVietnameseText(tip)}</div>)}</div>}
         </div>
         <div style={{ textAlign: 'center', marginBottom: 20 }}>
           {!submitted ? (
@@ -100,4 +111,3 @@ export default function RoleplayScreen() {
     </LearnerLayout>
   );
 }
-
