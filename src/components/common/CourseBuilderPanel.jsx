@@ -13,18 +13,7 @@ import {
   updateCourseItem,
   updateCourseModule,
 } from '../../api/services/courseManagement.js';
-
-const ITEM_TYPE_OPTIONS = [
-  { value: 'flashcard', label: 'Flashcard' },
-  { value: 'video', label: 'Video' },
-  { value: 'audio', label: 'Audio' },
-  { value: 'quiz', label: 'Quiz' },
-  { value: 'roleplay', label: 'Roleplay' },
-  { value: 'lesson_reading', label: 'Reading' },
-  { value: 'assignment', label: 'Assignment' },
-  { value: 'survey', label: 'Survey' },
-  { value: 'live_session', label: 'Live Session' },
-];
+import { useI18n } from '../../i18n/index.jsx';
 
 function normalizeVietnameseText(value) {
   const text = String(value || '');
@@ -46,6 +35,7 @@ export default function CourseBuilderPanel({
   onSelectedCourseIdChange,
   hideCourseSelector = false,
 }) {
+  const { t } = useI18n();
   const [selectedCourseId, setSelectedCourseId] = useState(selectedCourseIdProp || courses[0]?.id || '');
   const [catalog, setCatalog] = useState({});
   const [course, setCourse] = useState(null);
@@ -55,6 +45,17 @@ export default function CourseBuilderPanel({
   const [itemEditForms, setItemEditForms] = useState({});
   const [itemForms, setItemForms] = useState({});
   const [loading, setLoading] = useState(true);
+  const itemTypeOptions = [
+    { value: 'flashcard', label: t('learnerPages.editorPages.contentTypeFlashcard') },
+    { value: 'video', label: t('learnerPages.editorPages.contentTypeVideo') },
+    { value: 'audio', label: t('learnerPages.editorPages.contentTypeAudio') },
+    { value: 'quiz', label: t('learnerPages.editorPages.contentTypeQuiz') },
+    { value: 'roleplay', label: t('learnerPages.editorPages.contentTypeRoleplay') },
+    { value: 'lesson_reading', label: t('learnerPages.editorPages.contentTypeReading') },
+    { value: 'assignment', label: t('learnerPages.editorPages.contentTypeAssignment') },
+    { value: 'survey', label: t('learnerPages.editorPages.contentTypeSurvey') },
+    { value: 'live_session', label: t('learnerPages.editorPages.contentTypeLiveSession') },
+  ];
 
   useEffect(() => {
     if (!selectedCourseId && courses[0]?.id) setSelectedCourseId(courses[0].id);
@@ -152,11 +153,11 @@ export default function CourseBuilderPanel({
 
   const selectedTypeOptions = useMemo(() => {
     const typeMap = {};
-    ITEM_TYPE_OPTIONS.forEach((opt) => {
+    itemTypeOptions.forEach((opt) => {
       typeMap[opt.value] = catalog[opt.value] || [];
     });
     return typeMap;
-  }, [catalog]);
+  }, [catalog, itemTypeOptions]);
 
   const ensureItemForm = (moduleId) => {
     if (itemForms[moduleId]) return itemForms[moduleId];
@@ -185,7 +186,7 @@ export default function CourseBuilderPanel({
     if (!course) return;
     const title = courseForm.title.trim();
     if (!title) {
-      showToast?.('Tên khoá học là bắt buộc');
+      showToast?.(t('ui.courseBuilder.toastCourseTitleRequired'));
       return;
     }
 
@@ -195,23 +196,23 @@ export default function CourseBuilderPanel({
         title,
       });
       syncCourse(response.course);
-      showToast?.('Đã cập nhật khoá học');
+      showToast?.(t('ui.courseBuilder.toastCourseUpdated'));
     } catch (error) {
-      showToast?.(error?.message || 'Không thể cập nhật khoá học');
+      showToast?.(error?.message || t('ui.courseBuilder.toastCourseUpdateFailed'));
     }
   };
 
   const handleDeleteCourse = async () => {
     if (!course) return;
-    if (!window.confirm(`Xoá khoá học "${course.title}"?`)) return;
+    if (!window.confirm(t('ui.courseBuilder.confirmDeleteCourse').replace('{title}', course.title))) return;
 
     try {
       const deletedId = course.id;
       await deleteCourseDefinition(course.id);
-      onCourseDeleted?.(deletedId);
       showToast?.('Đã xoá khoá học');
+      showToast?.(t('ui.courseBuilder.toastCourseDeleted'));
     } catch (error) {
-      showToast?.(error?.message || 'Không thể xoá khoá học');
+      showToast?.(error?.message || t('ui.courseBuilder.toastCourseDeleteFailed'));
     }
   };
 
@@ -223,9 +224,9 @@ export default function CourseBuilderPanel({
       const response = await addCourseModule(course.id, title);
       syncCourse(response.course);
       setModuleTitle('');
-      showToast?.('Đã thêm module');
+      showToast?.(t('ui.courseBuilder.toastModuleAdded'));
     } catch (error) {
-      showToast?.(error?.message || 'Không thể thêm module');
+      showToast?.(error?.message || t('ui.courseBuilder.toastModuleAddFailed'));
     }
   };
 
@@ -233,29 +234,29 @@ export default function CourseBuilderPanel({
     if (!course) return;
     const title = String(moduleEditTitles[moduleId] || '').trim();
     if (!title) {
-      showToast?.('Tên module là bắt buộc');
+      showToast?.(t('ui.courseBuilder.toastModuleTitleRequired'));
       return;
     }
 
     try {
       const response = await updateCourseModule(course.id, moduleId, { title });
       syncCourse(response.course);
-      showToast?.('Đã cập nhật module');
+      showToast?.(t('ui.courseBuilder.toastModuleUpdated'));
     } catch (error) {
-      showToast?.(error?.message || 'Không thể cập nhật module');
+      showToast?.(error?.message || t('ui.courseBuilder.toastModuleUpdateFailed'));
     }
   };
 
   const handleDeleteModule = async (moduleId) => {
     if (!course) return;
-    if (!window.confirm('Xoá module này?')) return;
+    if (!window.confirm(t('ui.courseBuilder.confirmDeleteModule'))) return;
 
     try {
       const response = await deleteCourseModule(course.id, moduleId);
       syncCourse(response.course);
-      showToast?.('Đã xoá module');
+      showToast?.(t('ui.courseBuilder.toastModuleDeleted'));
     } catch (error) {
-      showToast?.(error?.message || 'Không thể xoá module');
+      showToast?.(error?.message || t('ui.courseBuilder.toastModuleDeleteFailed'));
     }
   };
 
@@ -271,9 +272,9 @@ export default function CourseBuilderPanel({
     try {
       const response = await reorderCourseModules(course.id, ids);
       syncCourse(response.course);
-      showToast?.('Đã sắp xếp module');
+      showToast?.(t('ui.courseBuilder.toastModuleSorted'));
     } catch (error) {
-      showToast?.(error?.message || 'Không thể sắp xếp module');
+      showToast?.(error?.message || t('ui.courseBuilder.toastModuleSortFailed'));
     }
   };
 
@@ -281,7 +282,7 @@ export default function CourseBuilderPanel({
     if (!course) return;
     const form = ensureItemForm(moduleId);
     if (!form.contentId) {
-      showToast?.('Chưa chọn content');
+      showToast?.(t('ui.courseBuilder.toastContentNotSelected'));
       return;
     }
 
@@ -293,9 +294,9 @@ export default function CourseBuilderPanel({
         delete next[moduleId];
         return next;
       });
-      showToast?.('Đã thêm item');
+      showToast?.(t('ui.courseBuilder.toastItemAdded'));
     } catch (error) {
-      showToast?.(error?.message || 'Không thể thêm item');
+      showToast?.(error?.message || t('ui.courseBuilder.toastItemAddFailed'));
     }
   };
 
@@ -303,29 +304,29 @@ export default function CourseBuilderPanel({
     if (!course) return;
     const form = ensureItemEditForm(item);
     if (!form.contentId) {
-      showToast?.('Chưa chọn content');
+      showToast?.(t('ui.courseBuilder.toastContentNotSelected'));
       return;
     }
 
     try {
       const response = await updateCourseItem(course.id, moduleId, item.id, form);
       syncCourse(response.course);
-      showToast?.('Đã cập nhật item');
+      showToast?.(t('ui.courseBuilder.toastItemUpdated'));
     } catch (error) {
-      showToast?.(error?.message || 'Không thể cập nhật item');
+      showToast?.(error?.message || t('ui.courseBuilder.toastItemUpdateFailed'));
     }
   };
 
   const handleDeleteItem = async (moduleId, itemId) => {
     if (!course) return;
-    if (!window.confirm('Xoá item này?')) return;
+    if (!window.confirm(t('ui.courseBuilder.confirmDeleteItem'))) return;
 
     try {
       const response = await deleteCourseItem(course.id, moduleId, itemId);
       syncCourse(response.course);
-      showToast?.('Đã xoá item');
+      showToast?.(t('ui.courseBuilder.toastItemDeleted'));
     } catch (error) {
-      showToast?.(error?.message || 'Không thể xoá item');
+      showToast?.(error?.message || t('ui.courseBuilder.toastItemDeleteFailed'));
     }
   };
 
@@ -344,19 +345,19 @@ export default function CourseBuilderPanel({
     try {
       const response = await reorderCourseItems(course.id, moduleId, ids);
       syncCourse(response.course);
-      showToast?.('Đã sắp xếp item');
+      showToast?.(t('ui.courseBuilder.toastItemSorted'));
     } catch (error) {
-      showToast?.(error?.message || 'Không thể sắp xếp item');
+      showToast?.(error?.message || t('ui.courseBuilder.toastItemSortFailed'));
     }
   };
 
   return (
     <div>
       <div className="card" style={{ marginBottom: 12 }}>
-        <h4 style={{ fontSize: 15, fontWeight: 700, marginBottom: 12 }}>Course Builder</h4>
+        <h4 style={{ fontSize: 15, fontWeight: 700, marginBottom: 12 }}>{t('ui.courseBuilder.title')}</h4>
         {!hideCourseSelector && (
           <div className="input-group" style={{ marginBottom: 12 }}>
-            <label className="input-label">Khoá học</label>
+            <label className="input-label">{t('ui.courseBuilder.course')}</label>
             <select className="input" value={selectedCourseId} onChange={(event) => setSelectedCourseId(event.target.value)}>
               {courses.map((c) => <option key={c.id} value={c.id}>{c.title}</option>)}
             </select>
@@ -364,45 +365,45 @@ export default function CourseBuilderPanel({
         )}
 
         <div className="admin-form__grid" style={{ marginBottom: 10 }}>
-          <div className="input-group admin-form__full"><label className="input-label">Tên khoá học</label><input className="input" value={courseForm.title} onChange={(event) => setCourseForm((prev) => ({ ...prev, title: event.target.value }))} /></div>
-          <div className="input-group admin-form__full"><label className="input-label">Mô tả</label><textarea className="input" rows={3} value={courseForm.description} onChange={(event) => setCourseForm((prev) => ({ ...prev, description: event.target.value }))} style={{ resize: 'vertical' }} /></div>
-          <div className="input-group"><label className="input-label">Thẻ (tách dấu phẩy)</label><input className="input" value={courseForm.tags} onChange={(event) => setCourseForm((prev) => ({ ...prev, tags: event.target.value }))} /></div>
-          <div className="input-group"><label className="input-label">Thời lượng (phút)</label><input className="input" type="number" min="1" value={courseForm.duration} onChange={(event) => setCourseForm((prev) => ({ ...prev, duration: event.target.value }))} /></div>
+          <div className="input-group admin-form__full"><label className="input-label">{t('ui.courseBuilder.courseTitle')}</label><input className="input" value={courseForm.title} onChange={(event) => setCourseForm((prev) => ({ ...prev, title: event.target.value }))} /></div>
+          <div className="input-group admin-form__full"><label className="input-label">{t('ui.courseBuilder.description')}</label><textarea className="input" rows={3} value={courseForm.description} onChange={(event) => setCourseForm((prev) => ({ ...prev, description: event.target.value }))} style={{ resize: 'vertical' }} /></div>
+          <div className="input-group"><label className="input-label">{t('ui.courseBuilder.tagsComma')}</label><input className="input" value={courseForm.tags} onChange={(event) => setCourseForm((prev) => ({ ...prev, tags: event.target.value }))} /></div>
+          <div className="input-group"><label className="input-label">{t('ui.courseBuilder.durationMinutes')}</label><input className="input" type="number" min="1" value={courseForm.duration} onChange={(event) => setCourseForm((prev) => ({ ...prev, duration: event.target.value }))} /></div>
         </div>
 
         <div style={{ display: 'flex', gap: 8, marginBottom: 12, flexWrap: 'wrap' }}>
-          <button className="btn btn--primary btn--sm" onClick={handleSaveCourse}>Lưu khoá học</button>
-          <button className="btn btn--danger btn--sm" onClick={handleDeleteCourse}>Xoá khoá học</button>
+          <button className="btn btn--primary btn--sm" onClick={handleSaveCourse}>{t('ui.courseBuilder.saveCourse')}</button>
+          <button className="btn btn--danger btn--sm" onClick={handleDeleteCourse}>{t('ui.courseBuilder.deleteCourse')}</button>
         </div>
 
         <div style={{ display: 'flex', gap: 8 }}>
-          <input className="input" placeholder="Tên module mới..." value={moduleTitle} onChange={(event) => setModuleTitle(event.target.value)} />
-          <button className="btn btn--secondary" onClick={handleAddModule}>+ Module</button>
+          <input className="input" placeholder={t('ui.courseBuilder.newModuleName')} value={moduleTitle} onChange={(event) => setModuleTitle(event.target.value)} />
+          <button className="btn btn--secondary" onClick={handleAddModule}>+ {t('ui.courseBuilder.module')}</button>
         </div>
       </div>
 
       {loading ? (
         <div className="skeleton skeleton-card" />
       ) : !course ? (
-        <div className="empty-state"><div className="empty-state__title">Không tìm thấy khoá học</div></div>
+        <div className="empty-state"><div className="empty-state__title">{t('ui.courseBuilder.courseNotFound')}</div></div>
       ) : (
         <>
-          {course.modules?.length === 0 && <div className="empty-state"><div className="empty-state__title">Khoá học chưa có module</div></div>}
+          {course.modules?.length === 0 && <div className="empty-state"><div className="empty-state__title">{t('ui.courseBuilder.courseNoModule')}</div></div>}
           {course.modules?.map((mod) => {
             const form = ensureItemForm(mod.id);
             const contentOptions = selectedTypeOptions[form.type] || [];
             return (
               <div key={mod.id} className="card" style={{ marginBottom: 10 }}>
-                <div style={{ fontWeight: 700, marginBottom: 8 }}>Module {mod.order}</div>
+                <div style={{ fontWeight: 700, marginBottom: 8 }}>{t('ui.courseBuilder.moduleN').replace('{index}', String(mod.order))}</div>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr auto auto auto', gap: 8, marginBottom: 8 }}>
                   <input className="input" value={moduleEditTitles[mod.id] || ''} onChange={(event) => setModuleEditTitles((prev) => ({ ...prev, [mod.id]: event.target.value }))} />
-                  <button className="btn btn--ghost btn--sm" onClick={() => handleMoveModule(mod.id, -1)}>Lên</button>
-                  <button className="btn btn--ghost btn--sm" onClick={() => handleMoveModule(mod.id, 1)}>Xuống</button>
-                  <button className="btn btn--primary btn--sm" onClick={() => handleSaveModule(mod.id)}>Lưu</button>
+                  <button className="btn btn--ghost btn--sm" onClick={() => handleMoveModule(mod.id, -1)}>{t('ui.common.up')}</button>
+                  <button className="btn btn--ghost btn--sm" onClick={() => handleMoveModule(mod.id, 1)}>{t('ui.common.down')}</button>
+                  <button className="btn btn--primary btn--sm" onClick={() => handleSaveModule(mod.id)}>{t('common.save')}</button>
                 </div>
 
                 {(mod.items || []).length === 0 ? (
-                  <div style={{ fontSize: 12, color: 'var(--color-text-muted)', marginBottom: 8 }}>Chưa có item</div>
+                  <div style={{ fontSize: 12, color: 'var(--color-text-muted)', marginBottom: 8 }}>{t('ui.courseBuilder.noItem')}</div>
                 ) : (
                   (mod.items || []).map((item) => {
                     const editForm = ensureItemEditForm(item);
@@ -417,17 +418,17 @@ export default function CourseBuilderPanel({
                             const nextContent = options.find((opt) => opt.id === editForm.contentId)?.id || options[0]?.id || '';
                             setItemEditForm(item, { type: nextType, contentId: nextContent });
                           }}>
-                            {ITEM_TYPE_OPTIONS.map((opt) => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
+                            {itemTypeOptions.map((opt) => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
                           </select>
                           <select className="input" value={editForm.contentId} onChange={(event) => setItemEditForm(item, { contentId: event.target.value })}>
-                            <option value="">-- Chọn content --</option>
+                            <option value="">{t('ui.courseBuilder.selectContent')}</option>
                             {itemContentOptions.map((opt) => <option key={opt.id} value={opt.id}>{opt.id} - {normalizeVietnameseText(opt.title)}</option>)}
                           </select>
                           <input className="input" value={editForm.title} onChange={(event) => setItemEditForm(item, { title: event.target.value })} />
-                          <button className="btn btn--ghost btn--sm" onClick={() => handleMoveItem(mod.id, item.id, -1)}>Lên</button>
-                          <button className="btn btn--ghost btn--sm" onClick={() => handleMoveItem(mod.id, item.id, 1)}>Xuống</button>
-                          <button className="btn btn--secondary btn--sm" onClick={() => handleSaveItem(mod.id, item)}>Lưu</button>
-                          <button className="btn btn--danger btn--sm" onClick={() => handleDeleteItem(mod.id, item.id)}>Xoá</button>
+                          <button className="btn btn--ghost btn--sm" onClick={() => handleMoveItem(mod.id, item.id, -1)}>{t('ui.common.up')}</button>
+                          <button className="btn btn--ghost btn--sm" onClick={() => handleMoveItem(mod.id, item.id, 1)}>{t('ui.common.down')}</button>
+                          <button className="btn btn--secondary btn--sm" onClick={() => handleSaveItem(mod.id, item)}>{t('common.save')}</button>
+                          <button className="btn btn--danger btn--sm" onClick={() => handleDeleteItem(mod.id, item.id)}>{t('common.delete')}</button>
                         </div>
                       </div>
                     );
@@ -440,18 +441,18 @@ export default function CourseBuilderPanel({
                     const nextContent = (selectedTypeOptions[nextType] || [])[0]?.id || '';
                     setItemForm(mod.id, { type: nextType, contentId: nextContent });
                   }}>
-                    {ITEM_TYPE_OPTIONS.map((opt) => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
+                    {itemTypeOptions.map((opt) => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
                   </select>
                   <select className="input" value={form.contentId} onChange={(event) => setItemForm(mod.id, { contentId: event.target.value })}>
-                    <option value="">-- Chọn content --</option>
+                    <option value="">{t('ui.courseBuilder.selectContent')}</option>
                     {contentOptions.map((opt) => <option key={opt.id} value={opt.id}>{opt.id} - {normalizeVietnameseText(opt.title)}</option>)}
                   </select>
-                  <input className="input" placeholder="Tiêu đề item (không bắt buộc)" value={form.title} onChange={(event) => setItemForm(mod.id, { title: event.target.value })} />
-                  <button className="btn btn--secondary" onClick={() => handleAddItem(mod.id)}>+ Item</button>
+                  <input className="input" placeholder={t('ui.courseBuilder.itemTitleOptional')} value={form.title} onChange={(event) => setItemForm(mod.id, { title: event.target.value })} />
+                  <button className="btn btn--secondary" onClick={() => handleAddItem(mod.id)}>+ {t('ui.courseBuilder.item')}</button>
                 </div>
 
                 <div style={{ marginTop: 8 }}>
-                  <button className="btn btn--danger btn--sm" onClick={() => handleDeleteModule(mod.id)}>Xoá module</button>
+                  <button className="btn btn--danger btn--sm" onClick={() => handleDeleteModule(mod.id)}>{t('ui.courseBuilder.deleteModule')}</button>
                 </div>
               </div>
             );

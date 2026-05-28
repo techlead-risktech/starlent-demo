@@ -7,6 +7,7 @@ import AdminLayout from '../layout/AdminLayout.jsx';
 import CourseBuilderPanel from './CourseBuilderPanel.jsx';
 import Modal from './Modal.jsx';
 import AddCourseForm from './AddCourseForm.jsx';
+import { useI18n } from '../../i18n/index.jsx';
 
 export default function CourseBuilderRoutePage({
   scope,
@@ -17,6 +18,7 @@ export default function CourseBuilderRoutePage({
   const navigate = useNavigate();
   const { courseId } = useParams();
   const { toast, showToast } = useToast();
+  const { t } = useI18n();
   const [loading, setLoading] = useState(true);
   const [courses, setCourses] = useState(fallbackCourses);
   const [showCreateCourseModal, setShowCreateCourseModal] = useState(false);
@@ -65,12 +67,12 @@ export default function CourseBuilderRoutePage({
     try {
       const response = await createCourseByScope(scope, payload);
       setCourses((prev) => [...prev, response.course]);
-      showToast('Đã tạo khoá học');
+      showToast(t('ui.toasts.courseCreated'));
       if (continueToBuilder) {
         navigate(`${builderBasePath}/${response.course.id}/builder`);
       }
     } catch (error) {
-      showToast(error?.message || 'Không thể tạo khoá học');
+      showToast(error?.message || t('ui.toasts.courseCreateFailed'));
     } finally {
       setShowCreateCourseModal(false);
     }
@@ -83,18 +85,18 @@ export default function CourseBuilderRoutePage({
   return (
     <AdminLayout title={title}>
       <div className="page__header" style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-        <button className="btn btn--ghost btn--sm" onClick={() => navigate(`${backPath}?tab=courses`)}>← Quay lại danh sách</button>
-        <button className="btn btn--primary btn--sm" onClick={() => setShowCreateCourseModal(true)}>+ Tạo khoá học</button>
+        <button className="btn btn--ghost btn--sm" onClick={() => navigate(`${backPath}?tab=courses`)}>{'\u2190'} {t('ui.courseBuilderRoute.backToList')}</button>
+        <button className="btn btn--primary btn--sm" onClick={() => setShowCreateCourseModal(true)}>+ {t('ui.courseBuilderRoute.createCourse')}</button>
       </div>
 
       {!selectedCourse ? (
         <div className="empty-state">
-          <div className="empty-state__icon">📚</div>
-          <div className="empty-state__title">Không tìm thấy khoá học</div>
+          <div className="empty-state__icon">{'📚'}</div>
+          <div className="empty-state__title">{t('ui.courseBuilderRoute.courseNotFound')}</div>
         </div>
       ) : (
         <div className="card">
-          <h3 className="card__title" style={{ marginBottom: 12 }}>🧱 Builder: {selectedCourse.title}</h3>
+          <h3 className="card__title" style={{ marginBottom: 12 }}>{'🧱'} {t('ui.courseBuilderRoute.builderTitle').replace('{title}', selectedCourse.title)}</h3>
           <CourseBuilderPanel
             courses={courses}
             selectedCourseId={selectedCourse.id}
@@ -115,3 +117,4 @@ export default function CourseBuilderRoutePage({
     </AdminLayout>
   );
 }
+

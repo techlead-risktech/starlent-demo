@@ -21,20 +21,21 @@ import {
   updateCourseContent,
 } from '../../api/services/courseManagement.js';
 import { assignCourseByEditor } from '../../api/services/distributionManagement.js';
+import { useI18n } from '../../i18n/index.jsx';
 
 const STATE_SYNC_EVENT = 'starlent:state-sync';
 const STATE_SYNC_KEY = 'starlent_state_sync_v1';
 
 const CONTENT_TYPE_OPTIONS = [
-  { type: 'flashcard', label: 'Flashcard (Thẻ)', icon: '🗂️' },
-  { type: 'video', label: 'Video (Video)', icon: '🎬' },
-  { type: 'audio', label: 'Audio (Âm thanh)', icon: '🎧' },
-  { type: 'quiz', label: 'Quiz (Trắc nghiệm)', icon: '📝' },
-  { type: 'roleplay', label: 'Roleplay (Nhập vai)', icon: '🎭' },
-  { type: 'lesson_reading', label: 'Reading (Bài đọc)', icon: '📖' },
-  { type: 'assignment', label: 'Assignment (Bài tập)', icon: '📌' },
-  { type: 'survey', label: 'Survey (Khảo sát)', icon: '🗳️' },
-  { type: 'live_session', label: 'Live Session (Buổi học trực tiếp)', icon: '📅' },
+  { type: 'flashcard', labelKey: 'learnerPages.editorPages.contentTypeFlashcard', icon: '🗂️' },
+  { type: 'video', labelKey: 'learnerPages.editorPages.contentTypeVideo', icon: '🎬' },
+  { type: 'audio', labelKey: 'learnerPages.editorPages.contentTypeAudio', icon: '🎧' },
+  { type: 'quiz', labelKey: 'learnerPages.editorPages.contentTypeQuiz', icon: '📝' },
+  { type: 'roleplay', labelKey: 'learnerPages.editorPages.contentTypeRoleplay', icon: '🎭' },
+  { type: 'lesson_reading', labelKey: 'learnerPages.editorPages.contentTypeReading', icon: '📖' },
+  { type: 'assignment', labelKey: 'learnerPages.editorPages.contentTypeAssignment', icon: '📌' },
+  { type: 'survey', labelKey: 'learnerPages.editorPages.contentTypeSurvey', icon: '🗳️' },
+  { type: 'live_session', labelKey: 'learnerPages.editorPages.contentTypeLiveSession', icon: '📅' },
 ];
 
 function normalizeVietnameseText(value) {
@@ -55,9 +56,9 @@ function fmtSec(seconds) {
   return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
 }
 
-function formatCourseStatusLabel(status) {
-  if (status === COURSE_STATUS.PUBLISHED) return 'Đã xuất bản';
-  if (status === COURSE_STATUS.DRAFT) return 'Bản nháp';
+function formatCourseStatusLabel(status, t) {
+  if (status === COURSE_STATUS.PUBLISHED) return t('learnerPages.editorPages.statusPublished');
+  if (status === COURSE_STATUS.DRAFT) return t('learnerPages.editorPages.statusDraft');
   return status;
 }
 
@@ -300,7 +301,7 @@ function buildPayloadByType(type, data) {
   return d;
 }
 
-function AudioPreviewPanel({ data }) {
+function AudioPreviewPanel({ data, t }) {
   const duration = Math.max(0, Number(data?.duration || 0));
   const segments = useMemo(() => (
     Array.isArray(data?.transcriptSegments) ? data.transcriptSegments : []
@@ -366,13 +367,13 @@ function AudioPreviewPanel({ data }) {
   return (
     <div className="card" style={{ marginTop: 12, background: '#F8FAFC' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-        <div style={{ fontWeight: 700, fontSize: 14 }}>Preview learner</div>
+        <div style={{ fontWeight: 700, fontSize: 14 }}>{t('learnerPages.editorPages.previewLearner')}</div>
         <div style={{ fontSize: 12, color: 'var(--color-text-muted)' }}>{fmtSec(time)} / {fmtSec(duration)}</div>
       </div>
       <div className="progress-bar" style={{ marginBottom: 10 }}><div className="progress-bar__fill" style={{ width: `${listenedPercent}%` }} /></div>
       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 10 }}>
         <button className="btn btn--secondary btn--sm" onClick={() => setTime((value) => Math.max(0, value - 5))}>-5s</button>
-        <button className="btn btn--primary btn--sm" onClick={() => setPlaying((value) => !value)}>{playing ? 'Pause' : 'Play'}</button>
+        <button className="btn btn--primary btn--sm" onClick={() => setPlaying((value) => !value)}>{playing ? t('learnerPages.editorPages.pause') : t('learnerPages.editorPages.play')}</button>
         <button className="btn btn--secondary btn--sm" onClick={() => setTime((value) => Math.min(duration, value + 5))}>+5s</button>
         {[0.5, 1, 1.5, 2].map((value) => (
           <button key={value} className={`btn btn--sm ${speed === value ? 'btn--primary' : 'btn--ghost'}`} onClick={() => setSpeed(value)}>
@@ -404,9 +405,9 @@ function AudioPreviewPanel({ data }) {
       {activeCheckpoint && (
         <div className="card" style={{ marginTop: 8, background: '#FFF7ED', borderColor: '#FCD34D' }}>
           <div style={{ fontSize: 12, fontWeight: 700, color: '#9A3412', marginBottom: 6 }}>
-            Checkpoint @ {activeCheckpoint.atSec}s
+            {t('learnerPages.editorPages.checkpoint')} @ {activeCheckpoint.atSec}s
           </div>
-          <div style={{ fontWeight: 600, marginBottom: 8 }}>{activeCheckpoint.question || '(Chưa nhập câu hỏi)'}</div>
+          <div style={{ fontWeight: 600, marginBottom: 8 }}>{activeCheckpoint.question || t('learnerPages.editorPages.unansweredQuestion')}</div>
           {(activeCheckpoint.options || []).map((option, idx) => (
             <button
               key={`${activeCheckpoint.id}_${idx}`}
@@ -419,20 +420,20 @@ function AudioPreviewPanel({ data }) {
                 setPlaying(true);
               }}
             >
-              {option || `(Đáp án ${idx + 1} trống)`}
+              {option || t('learnerPages.editorPages.emptyAnswer').replace('{index}', String(idx + 1))}
             </button>
           ))}
         </div>
       )}
 
       <div style={{ fontSize: 12, color: 'var(--color-text-muted)', marginTop: 8 }}>
-        Checkpoint đã trả lời: {Object.keys(answeredMap).length}/{checkpoints.length}
+        {t('learnerPages.editorPages.checkpointAnswered').replace('{done}', String(Object.keys(answeredMap).length)).replace('{total}', String(checkpoints.length))}
       </div>
     </div>
   );
 }
 
-function ContentFields({ type, data, onChange }) {
+function ContentFields({ type, data, onChange, t }) {
   if (!type) return null;
 
   if (type === 'video') {
@@ -441,50 +442,50 @@ function ContentFields({ type, data, onChange }) {
     return (
       <div>
         <div className="admin-form__grid">
-          <div className="input-group admin-form__full"><label className="input-label">Video URL</label><input className="input" value={data.videoUrl || ''} onChange={(e) => onChange({ ...data, videoUrl: e.target.value })} /></div>
-          <div className="input-group"><label className="input-label">YouTube ID</label><input className="input" value={data.youtubeId || ''} onChange={(e) => onChange({ ...data, youtubeId: e.target.value })} /></div>
-          <div className="input-group"><label className="input-label">Chế độ tiến độ</label><select className="input" value={data.progressMode || 'lesson_duration'} onChange={(e) => onChange({ ...data, progressMode: e.target.value })}><option value="lesson_duration">Theo thời lượng bài học</option><option value="full_video_duration">Theo thời lượng video YouTube</option></select></div>
-          <div className="input-group"><label className="input-label">Thời lượng (giây)</label><input className="input" type="number" min="0" value={data.duration || 0} onChange={(e) => onChange({ ...data, duration: Number(e.target.value || 0) })} /></div>
-          <div className="input-group admin-form__full"><label className="input-label">Transcript tổng</label><textarea className="input" rows={4} value={data.transcript || ''} onChange={(e) => onChange({ ...data, transcript: e.target.value })} /></div>
-          <div className="input-group admin-form__full"><label className="input-label">Captions</label><input className="input" value={data.captions || ''} onChange={(e) => onChange({ ...data, captions: e.target.value })} /></div>
+          <div className="input-group admin-form__full"><label className="input-label">{t('learnerPages.editorPages.videoUrl')}</label><input className="input" value={data.videoUrl || ''} onChange={(e) => onChange({ ...data, videoUrl: e.target.value })} /></div>
+          <div className="input-group"><label className="input-label">{t('learnerPages.editorPages.youtubeId')}</label><input className="input" value={data.youtubeId || ''} onChange={(e) => onChange({ ...data, youtubeId: e.target.value })} /></div>
+          <div className="input-group"><label className="input-label">{t('learnerPages.editorPages.progressMode')}</label><select className="input" value={data.progressMode || 'lesson_duration'} onChange={(e) => onChange({ ...data, progressMode: e.target.value })}><option value="lesson_duration">{t('learnerPages.editorPages.lessonDurationMode')}</option><option value="full_video_duration">{t('learnerPages.editorPages.youtubeDurationMode')}</option></select></div>
+          <div className="input-group"><label className="input-label">{t('learnerPages.editorPages.durationSeconds')}</label><input className="input" type="number" min="0" value={data.duration || 0} onChange={(e) => onChange({ ...data, duration: Number(e.target.value || 0) })} /></div>
+          <div className="input-group admin-form__full"><label className="input-label">{t('learnerPages.editorPages.transcriptSummary')}</label><textarea className="input" rows={4} value={data.transcript || ''} onChange={(e) => onChange({ ...data, transcript: e.target.value })} /></div>
+          <div className="input-group admin-form__full"><label className="input-label">{t('learnerPages.editorPages.captions')}</label><input className="input" value={data.captions || ''} onChange={(e) => onChange({ ...data, captions: e.target.value })} /></div>
         </div>
 
         <div style={{ marginTop: 8 }}>
-          <div style={{ fontWeight: 700, marginBottom: 8 }}>Transcript theo thời gian</div>
+          <div style={{ fontWeight: 700, marginBottom: 8 }}>{t('learnerPages.editorPages.transcriptTimeline')}</div>
           {segments.map((segment, idx) => (
             <div key={segment.id || idx} style={{ display: 'grid', gridTemplateColumns: '120px 120px 1fr auto', gap: 8, marginBottom: 8 }}>
               <input className="input" type="number" min="0" value={segment.startSec ?? 0} onChange={(e) => onChange({ ...data, transcriptSegments: segments.map((item, i) => (i === idx ? { ...item, startSec: Number(e.target.value || 0) } : item)) })} placeholder="startSec" />
               <input className="input" type="number" min="0" value={segment.endSec ?? 0} onChange={(e) => onChange({ ...data, transcriptSegments: segments.map((item, i) => (i === idx ? { ...item, endSec: Number(e.target.value || 0) } : item)) })} placeholder="endSec" />
-              <input className="input" value={segment.text || ''} onChange={(e) => onChange({ ...data, transcriptSegments: segments.map((item, i) => (i === idx ? { ...item, text: e.target.value } : item)) })} placeholder="Nội dung segment" />
-              <button className="btn btn--danger btn--sm" onClick={() => onChange({ ...data, transcriptSegments: segments.filter((_, i) => i !== idx) })}>Xoá</button>
+              <input className="input" value={segment.text || ''} onChange={(e) => onChange({ ...data, transcriptSegments: segments.map((item, i) => (i === idx ? { ...item, text: e.target.value } : item)) })} placeholder={t('learnerPages.editorPages.segmentPlaceholder')} />
+              <button className="btn btn--danger btn--sm" onClick={() => onChange({ ...data, transcriptSegments: segments.filter((_, i) => i !== idx) })}>{t('learnerPages.editorPages.delete')}</button>
             </div>
           ))}
-          <button className="btn btn--secondary btn--sm" onClick={() => onChange({ ...data, transcriptSegments: [...segments, { id: `seg_${segments.length + 1}`, startSec: 0, endSec: 0, text: '' }] })}>+ Segment</button>
+          <button className="btn btn--secondary btn--sm" onClick={() => onChange({ ...data, transcriptSegments: [...segments, { id: `seg_${segments.length + 1}`, startSec: 0, endSec: 0, text: '' }] })}>+ {t('learnerPages.editorPages.segment')}</button>
         </div>
 
         <div style={{ marginTop: 10 }}>
-          <div style={{ fontWeight: 700, marginBottom: 8 }}>Checkpoint câu hỏi ngắn</div>
+          <div style={{ fontWeight: 700, marginBottom: 8 }}>{t('learnerPages.editorPages.shortQuestionCheckpoint')}</div>
           {checkpoints.map((checkpoint, idx) => (
             <div key={checkpoint.id || idx} className="card" style={{ marginBottom: 8 }}>
               <div style={{ display: 'grid', gridTemplateColumns: '120px 1fr auto', gap: 8, marginBottom: 8 }}>
                 <input className="input" type="number" min="0" value={checkpoint.atSec ?? 0} onChange={(e) => onChange({ ...data, checkpoints: checkpoints.map((item, i) => (i === idx ? { ...item, atSec: Number(e.target.value || 0) } : item)) })} placeholder="atSec" />
-                <input className="input" value={checkpoint.question || ''} onChange={(e) => onChange({ ...data, checkpoints: checkpoints.map((item, i) => (i === idx ? { ...item, question: e.target.value } : item)) })} placeholder="Nội dung câu hỏi" />
-                <button className="btn btn--danger btn--sm" onClick={() => onChange({ ...data, checkpoints: checkpoints.filter((_, i) => i !== idx) })}>Xoá</button>
+                <input className="input" value={checkpoint.question || ''} onChange={(e) => onChange({ ...data, checkpoints: checkpoints.map((item, i) => (i === idx ? { ...item, question: e.target.value } : item)) })} placeholder={t('learnerPages.editorPages.questionPlaceholder')} />
+                <button className="btn btn--danger btn--sm" onClick={() => onChange({ ...data, checkpoints: checkpoints.filter((_, i) => i !== idx) })}>{t('learnerPages.editorPages.delete')}</button>
               </div>
               {(checkpoint.options || []).map((option, optionIdx) => (
                 <div key={optionIdx} style={{ display: 'grid', gridTemplateColumns: '80px 1fr', gap: 8, marginBottom: 6 }}>
-                  <span style={{ fontSize: 12, color: 'var(--color-text-muted)', alignSelf: 'center' }}>Đáp án {optionIdx + 1}</span>
+                  <span style={{ fontSize: 12, color: 'var(--color-text-muted)', alignSelf: 'center' }}>{t('learnerPages.editorPages.answerN').replace('{index}', String(optionIdx + 1))}</span>
                   <input className="input" value={option || ''} onChange={(e) => onChange({ ...data, checkpoints: checkpoints.map((item, i) => (i === idx ? { ...item, options: (item.options || []).map((opt, oi) => (oi === optionIdx ? e.target.value : opt)) } : item)) })} />
                 </div>
               ))}
-              <div className="input-group"><label className="input-label">Đáp án đúng</label>
+              <div className="input-group"><label className="input-label">{t('learnerPages.editorPages.correctAnswer')}</label>
                 <select className="input" value={checkpoint.correctIndex ?? 0} onChange={(e) => onChange({ ...data, checkpoints: checkpoints.map((item, i) => (i === idx ? { ...item, correctIndex: Number(e.target.value || 0) } : item)) })}>
-                  {(checkpoint.options || []).map((_, i) => <option key={i} value={i}>Đáp án {i + 1}</option>)}
+                  {(checkpoint.options || []).map((_, i) => <option key={i} value={i}>{t('learnerPages.editorPages.answerN').replace('{index}', String(i + 1))}</option>)}
                 </select>
               </div>
             </div>
           ))}
-          <button className="btn btn--secondary btn--sm" onClick={() => onChange({ ...data, checkpoints: [...checkpoints, { id: `cp_${checkpoints.length + 1}`, atSec: 0, question: '', options: ['', '', ''], correctIndex: 0 }] })}>+ Checkpoint</button>
+          <button className="btn btn--secondary btn--sm" onClick={() => onChange({ ...data, checkpoints: [...checkpoints, { id: `cp_${checkpoints.length + 1}`, atSec: 0, question: '', options: ['', '', ''], correctIndex: 0 }] })}>+ {t('learnerPages.editorPages.checkpoint')}</button>
         </div>
       </div>
     );
@@ -496,51 +497,51 @@ function ContentFields({ type, data, onChange }) {
     return (
       <div>
         <div className="admin-form__grid">
-          <div className="input-group admin-form__full"><label className="input-label">Audio URL</label><input className="input" value={data.audioUrl || ''} onChange={(e) => onChange({ ...data, audioUrl: e.target.value })} /></div>
-          <div className="input-group"><label className="input-label">Thời lượng (giây)</label><input className="input" type="number" min="0" value={data.duration || 0} onChange={(e) => onChange({ ...data, duration: Number(e.target.value || 0) })} /></div>
-          <div className="input-group admin-form__full"><label className="input-label">Transcript tổng</label><textarea className="input" rows={4} value={data.transcript || ''} onChange={(e) => onChange({ ...data, transcript: e.target.value })} /></div>
+          <div className="input-group admin-form__full"><label className="input-label">{t('learnerPages.editorPages.audioUrl')}</label><input className="input" value={data.audioUrl || ''} onChange={(e) => onChange({ ...data, audioUrl: e.target.value })} /></div>
+          <div className="input-group"><label className="input-label">{t('learnerPages.editorPages.durationSeconds')}</label><input className="input" type="number" min="0" value={data.duration || 0} onChange={(e) => onChange({ ...data, duration: Number(e.target.value || 0) })} /></div>
+          <div className="input-group admin-form__full"><label className="input-label">{t('learnerPages.editorPages.transcriptSummary')}</label><textarea className="input" rows={4} value={data.transcript || ''} onChange={(e) => onChange({ ...data, transcript: e.target.value })} /></div>
         </div>
 
         <div style={{ marginTop: 8 }}>
-          <div style={{ fontWeight: 700, marginBottom: 8 }}>Transcript theo thời gian</div>
+          <div style={{ fontWeight: 700, marginBottom: 8 }}>{t('learnerPages.editorPages.transcriptTimeline')}</div>
           {segments.map((segment, idx) => (
             <div key={segment.id || idx} style={{ display: 'grid', gridTemplateColumns: '120px 120px 1fr auto', gap: 8, marginBottom: 8 }}>
               <input className="input" type="number" min="0" value={segment.startSec ?? 0} onChange={(e) => onChange({ ...data, transcriptSegments: segments.map((item, i) => (i === idx ? { ...item, startSec: Number(e.target.value || 0) } : item)) })} placeholder="startSec" />
               <input className="input" type="number" min="0" value={segment.endSec ?? 0} onChange={(e) => onChange({ ...data, transcriptSegments: segments.map((item, i) => (i === idx ? { ...item, endSec: Number(e.target.value || 0) } : item)) })} placeholder="endSec" />
-              <input className="input" value={segment.text || ''} onChange={(e) => onChange({ ...data, transcriptSegments: segments.map((item, i) => (i === idx ? { ...item, text: e.target.value } : item)) })} placeholder="Nội dung segment" />
-              <button className="btn btn--danger btn--sm" onClick={() => onChange({ ...data, transcriptSegments: segments.filter((_, i) => i !== idx) })}>Xoá</button>
+              <input className="input" value={segment.text || ''} onChange={(e) => onChange({ ...data, transcriptSegments: segments.map((item, i) => (i === idx ? { ...item, text: e.target.value } : item)) })} placeholder={t('learnerPages.editorPages.segmentPlaceholder')} />
+              <button className="btn btn--danger btn--sm" onClick={() => onChange({ ...data, transcriptSegments: segments.filter((_, i) => i !== idx) })}>{t('learnerPages.editorPages.delete')}</button>
             </div>
           ))}
-          <button className="btn btn--secondary btn--sm" onClick={() => onChange({ ...data, transcriptSegments: [...segments, { id: `seg_${segments.length + 1}`, startSec: 0, endSec: 0, text: '' }] })}>+ Segment</button>
+          <button className="btn btn--secondary btn--sm" onClick={() => onChange({ ...data, transcriptSegments: [...segments, { id: `seg_${segments.length + 1}`, startSec: 0, endSec: 0, text: '' }] })}>+ {t('learnerPages.editorPages.segment')}</button>
         </div>
 
         <div style={{ marginTop: 10 }}>
-          <div style={{ fontWeight: 700, marginBottom: 8 }}>Checkpoint câu hỏi ngắn</div>
+          <div style={{ fontWeight: 700, marginBottom: 8 }}>{t('learnerPages.editorPages.shortQuestionCheckpoint')}</div>
           {checkpoints.map((checkpoint, idx) => (
             <div key={checkpoint.id || idx} className="card" style={{ marginBottom: 8 }}>
               <div style={{ display: 'grid', gridTemplateColumns: '120px 1fr auto', gap: 8, marginBottom: 8 }}>
                 <input className="input" type="number" min="0" value={checkpoint.atSec ?? 0} onChange={(e) => onChange({ ...data, checkpoints: checkpoints.map((item, i) => (i === idx ? { ...item, atSec: Number(e.target.value || 0) } : item)) })} placeholder="atSec" />
-                <input className="input" value={checkpoint.question || ''} onChange={(e) => onChange({ ...data, checkpoints: checkpoints.map((item, i) => (i === idx ? { ...item, question: e.target.value } : item)) })} placeholder="Nội dung câu hỏi" />
-                <button className="btn btn--danger btn--sm" onClick={() => onChange({ ...data, checkpoints: checkpoints.filter((_, i) => i !== idx) })}>Xoá</button>
+                <input className="input" value={checkpoint.question || ''} onChange={(e) => onChange({ ...data, checkpoints: checkpoints.map((item, i) => (i === idx ? { ...item, question: e.target.value } : item)) })} placeholder={t('learnerPages.editorPages.questionPlaceholder')} />
+                <button className="btn btn--danger btn--sm" onClick={() => onChange({ ...data, checkpoints: checkpoints.filter((_, i) => i !== idx) })}>{t('learnerPages.editorPages.delete')}</button>
               </div>
               {(checkpoint.options || []).map((option, optionIdx) => (
                 <div key={`${checkpoint.id || idx}_${optionIdx}`} style={{ display: 'grid', gridTemplateColumns: '120px 1fr', gap: 8, marginBottom: 6 }}>
-                  <span style={{ fontSize: 12, color: 'var(--color-text-muted)', alignSelf: 'center' }}>Đáp án {optionIdx + 1}</span>
+                  <span style={{ fontSize: 12, color: 'var(--color-text-muted)', alignSelf: 'center' }}>{t('learnerPages.editorPages.answerN').replace('{index}', String(optionIdx + 1))}</span>
                   <input className="input" value={option || ''} onChange={(e) => onChange({ ...data, checkpoints: checkpoints.map((item, i) => (i === idx ? { ...item, options: (item.options || []).map((opt, oi) => (oi === optionIdx ? e.target.value : opt)) } : item)) })} />
                 </div>
               ))}
               <div className="input-group">
-                <label className="input-label">Đáp án đúng</label>
+                <label className="input-label">{t('learnerPages.editorPages.correctAnswer')}</label>
                 <select className="input" value={checkpoint.correctIndex ?? 0} onChange={(e) => onChange({ ...data, checkpoints: checkpoints.map((item, i) => (i === idx ? { ...item, correctIndex: Number(e.target.value || 0) } : item)) })}>
-                  {(checkpoint.options || []).map((_, optionIdx) => <option key={optionIdx} value={optionIdx}>Đáp án {optionIdx + 1}</option>)}
+                  {(checkpoint.options || []).map((_, optionIdx) => <option key={optionIdx} value={optionIdx}>{t('learnerPages.editorPages.answerN').replace('{index}', String(optionIdx + 1))}</option>)}
                 </select>
               </div>
             </div>
           ))}
-          <button className="btn btn--secondary btn--sm" onClick={() => onChange({ ...data, checkpoints: [...checkpoints, { id: `cp_${checkpoints.length + 1}`, atSec: 0, question: '', options: ['', '', ''], correctIndex: 0 }] })}>+ Checkpoint</button>
+          <button className="btn btn--secondary btn--sm" onClick={() => onChange({ ...data, checkpoints: [...checkpoints, { id: `cp_${checkpoints.length + 1}`, atSec: 0, question: '', options: ['', '', ''], correctIndex: 0 }] })}>+ {t('learnerPages.editorPages.checkpoint')}</button>
         </div>
 
-        <AudioPreviewPanel data={data} />
+        <AudioPreviewPanel data={data} t={t} />
       </div>
     );
   }
@@ -549,16 +550,16 @@ function ContentFields({ type, data, onChange }) {
     const tips = data.tips || [];
     return (
       <div>
-        <div className="input-group"><label className="input-label">Scenario</label><textarea className="input" rows={5} value={data.scenario || ''} onChange={(e) => onChange({ ...data, scenario: e.target.value })} /></div>
-        <div className="input-group"><label className="input-label">Suggested Response</label><textarea className="input" rows={5} value={data.suggestedResponse || ''} onChange={(e) => onChange({ ...data, suggestedResponse: e.target.value })} /></div>
-        <div className="input-group"><label className="input-label">Tips</label></div>
+        <div className="input-group"><label className="input-label">{t('learnerPages.editorPages.scenario')}</label><textarea className="input" rows={5} value={data.scenario || ''} onChange={(e) => onChange({ ...data, scenario: e.target.value })} /></div>
+        <div className="input-group"><label className="input-label">{t('learnerPages.editorPages.suggestedResponse')}</label><textarea className="input" rows={5} value={data.suggestedResponse || ''} onChange={(e) => onChange({ ...data, suggestedResponse: e.target.value })} /></div>
+        <div className="input-group"><label className="input-label">{t('learnerPages.editorPages.tips')}</label></div>
         {tips.map((tip, idx) => (
           <div key={`${idx}`} style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: 8, marginBottom: 8 }}>
             <input className="input" value={tip} onChange={(e) => onChange({ ...data, tips: tips.map((t, i) => (i === idx ? e.target.value : t)) })} />
-            <button className="btn btn--danger btn--sm" onClick={() => onChange({ ...data, tips: tips.filter((_, i) => i !== idx) })}>Xoá</button>
+            <button className="btn btn--danger btn--sm" onClick={() => onChange({ ...data, tips: tips.filter((_, i) => i !== idx) })}>{t('learnerPages.editorPages.delete')}</button>
           </div>
         ))}
-        <button className="btn btn--secondary btn--sm" onClick={() => onChange({ ...data, tips: [...tips, ''] })}>+ Tip</button>
+        <button className="btn btn--secondary btn--sm" onClick={() => onChange({ ...data, tips: [...tips, ''] })}>+ {t('learnerPages.editorPages.tip')}</button>
       </div>
     );
   }
@@ -568,27 +569,27 @@ function ContentFields({ type, data, onChange }) {
     return (
       <div>
         <div className="admin-form__grid" style={{ marginBottom: 8 }}>
-          <div className="input-group"><label className="input-label">Điểm đạt (%)</label><input className="input" type="number" min="0" max="100" value={data.passScore ?? 70} onChange={(e) => onChange({ ...data, passScore: Number(e.target.value || 70) })} /></div>
-          <div className="input-group"><label className="input-label">Số lần làm tối đa</label><input className="input" type="number" min="1" value={data.attemptLimit || 3} onChange={(e) => onChange({ ...data, attemptLimit: Number(e.target.value || 3) })} /></div>
-          <div className="input-group"><label className="input-label">Thời gian làm bài (giây)</label><input className="input" type="number" min="30" value={data.timeLimit || 300} onChange={(e) => onChange({ ...data, timeLimit: Number(e.target.value || 300) })} /></div>
+          <div className="input-group"><label className="input-label">{t('learnerPages.editorPages.passScore')}</label><input className="input" type="number" min="0" max="100" value={data.passScore ?? 70} onChange={(e) => onChange({ ...data, passScore: Number(e.target.value || 70) })} /></div>
+          <div className="input-group"><label className="input-label">{t('learnerPages.editorPages.maxAttempts')}</label><input className="input" type="number" min="1" value={data.attemptLimit || 3} onChange={(e) => onChange({ ...data, attemptLimit: Number(e.target.value || 3) })} /></div>
+          <div className="input-group"><label className="input-label">{t('learnerPages.editorPages.quizTimeLimit')}</label><input className="input" type="number" min="30" value={data.timeLimit || 300} onChange={(e) => onChange({ ...data, timeLimit: Number(e.target.value || 300) })} /></div>
         </div>
         {questions.map((q, idx) => (
           <div key={q.id || idx} className="card" style={{ marginBottom: 10 }}>
             <div style={{ display: 'grid', gridTemplateColumns: '120px 1fr 180px auto', gap: 8, marginBottom: 8 }}>
               <input className="input" value={q.id || ''} onChange={(e) => onChange({ ...data, questions: questions.map((it, i) => (i === idx ? { ...it, id: e.target.value } : it)) })} placeholder="id" />
-              <input className="input" value={q.question || ''} onChange={(e) => onChange({ ...data, questions: questions.map((it, i) => (i === idx ? { ...it, question: e.target.value } : it)) })} placeholder="Câu hỏi" />
+              <input className="input" value={q.question || ''} onChange={(e) => onChange({ ...data, questions: questions.map((it, i) => (i === idx ? { ...it, question: e.target.value } : it)) })} placeholder={t('learnerPages.editorPages.questionPlaceholderShort')} />
               <select className="input" value={q.questionType || 'single_choice'} onChange={(e) => onChange({ ...data, questions: questions.map((it, i) => (i === idx ? { ...it, questionType: e.target.value } : it)) })}>
-                <option value="single_choice">Single Choice (Một đáp án đúng)</option>
-                <option value="multiple_select">Multiple Select (Nhiều đáp án đúng)</option>
-                <option value="ordering">Ordering (Sắp xếp thứ tự)</option>
-                <option value="true_false">True/False (Đúng/Sai)</option>
-                <option value="short_answer">Short Answer (Trả lời ngắn)</option>
+                <option value="single_choice">{t('learnerPages.editorPages.singleChoice')}</option>
+                <option value="multiple_select">{t('learnerPages.editorPages.multipleSelect')}</option>
+                <option value="ordering">{t('learnerPages.editorPages.ordering')}</option>
+                <option value="true_false">{t('learnerPages.editorPages.trueFalse')}</option>
+                <option value="short_answer">{t('learnerPages.editorPages.shortAnswer')}</option>
               </select>
-              <button className="btn btn--danger btn--sm" onClick={() => onChange({ ...data, questions: questions.filter((_, i) => i !== idx) })}>Xoá</button>
+              <button className="btn btn--danger btn--sm" onClick={() => onChange({ ...data, questions: questions.filter((_, i) => i !== idx) })}>{t('learnerPages.editorPages.delete')}</button>
             </div>
             {(q.questionType === 'single_choice' || q.questionType === 'multiple_select' || q.questionType === 'true_false') && [0, 1, 2, 3].map((optIdx) => (
               <div key={optIdx} style={{ display: 'grid', gridTemplateColumns: '80px 1fr', gap: 8, marginBottom: 6 }}>
-                <span style={{ fontSize: 12, color: 'var(--color-text-muted)', alignSelf: 'center' }}>Đáp án {optIdx + 1}</span>
+                <span style={{ fontSize: 12, color: 'var(--color-text-muted)', alignSelf: 'center' }}>{t('learnerPages.editorPages.answerN').replace('{index}', String(optIdx + 1))}</span>
                 <input
                   className="input"
                   value={(q.options || [])[optIdx] || ''}
@@ -600,28 +601,28 @@ function ContentFields({ type, data, onChange }) {
               </div>
             ))}
             <div className="admin-form__grid">
-              {q.questionType === 'single_choice' && <div className="input-group"><label className="input-label">Đáp án đúng</label><select className="input" value={q.correctIndex || 0} onChange={(e) => onChange({ ...data, questions: questions.map((it, i) => (i === idx ? { ...it, correctIndex: Number(e.target.value) } : it)) })}>{[0, 1, 2, 3].map((i) => <option key={i} value={i}>Đáp án {i + 1}</option>)}</select></div>}
-              {q.questionType === 'multiple_select' && <div className="input-group"><label className="input-label">Đáp án đúng (vd: 0,2)</label><input className="input" value={(q.correctIndices || []).join(',')} onChange={(e) => onChange({ ...data, questions: questions.map((it, i) => (i === idx ? { ...it, correctIndices: e.target.value.split(',').map((x) => Number(x.trim())).filter((x) => Number.isInteger(x) && x >= 0 && x <= 3) } : it)) })} /></div>}
-              {q.questionType === 'ordering' && <div className="input-group"><label className="input-label">Thứ tự đúng (vd: a,b,c)</label><input className="input" value={(q.correctOrder || []).join(',')} onChange={(e) => onChange({ ...data, questions: questions.map((it, i) => (i === idx ? { ...it, correctOrder: e.target.value.split(',').map((x) => x.trim()).filter(Boolean) } : it)) })} /></div>}
-              {q.questionType === 'short_answer' && <div className="input-group"><label className="input-label">Đáp án mẫu</label><input className="input" value={q.sampleAnswer || ''} onChange={(e) => onChange({ ...data, questions: questions.map((it, i) => (i === idx ? { ...it, sampleAnswer: e.target.value } : it)) })} /></div>}
-              <div className="input-group"><label className="input-label">Giải thích</label><input className="input" value={q.explanation || ''} onChange={(e) => onChange({ ...data, questions: questions.map((it, i) => (i === idx ? { ...it, explanation: e.target.value } : it)) })} /></div>
+              {q.questionType === 'single_choice' && <div className="input-group"><label className="input-label">{t('learnerPages.editorPages.correctAnswer')}</label><select className="input" value={q.correctIndex || 0} onChange={(e) => onChange({ ...data, questions: questions.map((it, i) => (i === idx ? { ...it, correctIndex: Number(e.target.value) } : it)) })}>{[0, 1, 2, 3].map((i) => <option key={i} value={i}>{t('learnerPages.editorPages.answerN').replace('{index}', String(i + 1))}</option>)}</select></div>}
+              {q.questionType === 'multiple_select' && <div className="input-group"><label className="input-label">{t('learnerPages.editorPages.correctAnswersHint')}</label><input className="input" value={(q.correctIndices || []).join(',')} onChange={(e) => onChange({ ...data, questions: questions.map((it, i) => (i === idx ? { ...it, correctIndices: e.target.value.split(',').map((x) => Number(x.trim())).filter((x) => Number.isInteger(x) && x >= 0 && x <= 3) } : it)) })} /></div>}
+              {q.questionType === 'ordering' && <div className="input-group"><label className="input-label">{t('learnerPages.editorPages.correctOrderHint')}</label><input className="input" value={(q.correctOrder || []).join(',')} onChange={(e) => onChange({ ...data, questions: questions.map((it, i) => (i === idx ? { ...it, correctOrder: e.target.value.split(',').map((x) => x.trim()).filter(Boolean) } : it)) })} /></div>}
+              {q.questionType === 'short_answer' && <div className="input-group"><label className="input-label">{t('learnerPages.editorPages.sampleAnswer')}</label><input className="input" value={q.sampleAnswer || ''} onChange={(e) => onChange({ ...data, questions: questions.map((it, i) => (i === idx ? { ...it, sampleAnswer: e.target.value } : it)) })} /></div>}
+              <div className="input-group"><label className="input-label">{t('learnerPages.editorPages.explanation')}</label><input className="input" value={q.explanation || ''} onChange={(e) => onChange({ ...data, questions: questions.map((it, i) => (i === idx ? { ...it, explanation: e.target.value } : it)) })} /></div>
             </div>
             {q.questionType === 'ordering' && (
               <div style={{ marginTop: 8 }}>
-                <div style={{ fontWeight: 700, marginBottom: 6 }}>Items (id,text)</div>
+                <div style={{ fontWeight: 700, marginBottom: 6 }}>{t('learnerPages.editorPages.itemsLabel')}</div>
                 {(q.items || []).map((item, itemIdx) => (
                   <div key={`${q.id}-${itemIdx}`} style={{ display: 'grid', gridTemplateColumns: '120px 1fr auto', gap: 8, marginBottom: 6 }}>
                     <input className="input" value={item.id || ''} onChange={(e) => onChange({ ...data, questions: questions.map((it, i) => (i === idx ? { ...it, items: (it.items || []).map((x, j) => (j === itemIdx ? { ...x, id: e.target.value } : x)) } : it)) })} />
                     <input className="input" value={item.text || ''} onChange={(e) => onChange({ ...data, questions: questions.map((it, i) => (i === idx ? { ...it, items: (it.items || []).map((x, j) => (j === itemIdx ? { ...x, text: e.target.value } : x)) } : it)) })} />
-                    <button className="btn btn--danger btn--sm" onClick={() => onChange({ ...data, questions: questions.map((it, i) => (i === idx ? { ...it, items: (it.items || []).filter((_, j) => j !== itemIdx) } : it)) })}>Xoá</button>
+                    <button className="btn btn--danger btn--sm" onClick={() => onChange({ ...data, questions: questions.map((it, i) => (i === idx ? { ...it, items: (it.items || []).filter((_, j) => j !== itemIdx) } : it)) })}>{t('learnerPages.editorPages.delete')}</button>
                   </div>
                 ))}
-                <button className="btn btn--secondary btn--sm" onClick={() => onChange({ ...data, questions: questions.map((it, i) => (i === idx ? { ...it, items: [...(it.items || []), { id: `s${(it.items || []).length + 1}`, text: '' }] } : it)) })}>+ Item</button>
+                <button className="btn btn--secondary btn--sm" onClick={() => onChange({ ...data, questions: questions.map((it, i) => (i === idx ? { ...it, items: [...(it.items || []), { id: `s${(it.items || []).length + 1}`, text: '' }] } : it)) })}>+ {t('learnerPages.editorPages.item')}</button>
               </div>
             )}
           </div>
         ))}
-        <button className="btn btn--secondary btn--sm" onClick={() => onChange({ ...data, questions: [...questions, { id: `q${questions.length + 1}`, questionType: 'single_choice', question: '', options: ['', '', '', ''], correctIndex: 0, correctIndices: [], explanation: '' }] })}>+ Câu hỏi</button>
+        <button className="btn btn--secondary btn--sm" onClick={() => onChange({ ...data, questions: [...questions, { id: `q${questions.length + 1}`, questionType: 'single_choice', question: '', options: ['', '', '', ''], correctIndex: 0, correctIndices: [], explanation: '' }] })}>+ {t('learnerPages.editorPages.addQuestion')}</button>
       </div>
     );
   }
@@ -629,7 +630,7 @@ function ContentFields({ type, data, onChange }) {
   if (type === 'lesson_reading') {
     return (
       <div className="admin-form__grid">
-        <div className="input-group admin-form__full"><label className="input-label">Nội dung (markdown/text)</label><textarea className="input" rows={6} value={data.body || ''} onChange={(e) => onChange({ ...data, body: e.target.value })} /></div>
+        <div className="input-group admin-form__full"><label className="input-label">{t('learnerPages.editorPages.markdownContent')}</label><textarea className="input" rows={6} value={data.body || ''} onChange={(e) => onChange({ ...data, body: e.target.value })} /></div>
       </div>
     );
   }
@@ -637,11 +638,11 @@ function ContentFields({ type, data, onChange }) {
   if (type === 'assignment') {
     return (
       <div className="admin-form__grid">
-        <div className="input-group admin-form__full"><label className="input-label">Instruction</label><textarea className="input" rows={5} value={data.instruction || ''} onChange={(e) => onChange({ ...data, instruction: e.target.value })} /></div>
-        <div className="input-group"><label className="input-label">Submission Type</label><select className="input" value={data.submissionType || 'text'} onChange={(e) => onChange({ ...data, submissionType: e.target.value })}><option value="text">Text</option><option value="file">File</option><option value="both">Both</option></select></div>
-        <div className="input-group"><label className="input-label">Max Score</label><input className="input" type="number" min="0" value={data.maxScore || 0} onChange={(e) => onChange({ ...data, maxScore: Number(e.target.value || 0) })} /></div>
-        <div className="input-group"><label className="input-label">Due At</label><input className="input" value={data.dueAt || ''} onChange={(e) => onChange({ ...data, dueAt: e.target.value })} /></div>
-        <div className="input-group admin-form__full"><label className="input-label">Rubric</label><textarea className="input" rows={4} value={data.rubric || ''} onChange={(e) => onChange({ ...data, rubric: e.target.value })} /></div>
+        <div className="input-group admin-form__full"><label className="input-label">{t('learnerPages.editorPages.instruction')}</label><textarea className="input" rows={5} value={data.instruction || ''} onChange={(e) => onChange({ ...data, instruction: e.target.value })} /></div>
+        <div className="input-group"><label className="input-label">{t('learnerPages.editorPages.submissionType')}</label><select className="input" value={data.submissionType || 'text'} onChange={(e) => onChange({ ...data, submissionType: e.target.value })}><option value="text">{t('learnerPages.editorPages.submissionText')}</option><option value="file">{t('learnerPages.editorPages.submissionFile')}</option><option value="both">{t('learnerPages.editorPages.submissionBoth')}</option></select></div>
+        <div className="input-group"><label className="input-label">{t('learnerPages.editorPages.maxScore')}</label><input className="input" type="number" min="0" value={data.maxScore || 0} onChange={(e) => onChange({ ...data, maxScore: Number(e.target.value || 0) })} /></div>
+        <div className="input-group"><label className="input-label">{t('learnerPages.editorPages.dueAt')}</label><input className="input" value={data.dueAt || ''} onChange={(e) => onChange({ ...data, dueAt: e.target.value })} /></div>
+        <div className="input-group admin-form__full"><label className="input-label">{t('learnerPages.editorPages.rubric')}</label><textarea className="input" rows={4} value={data.rubric || ''} onChange={(e) => onChange({ ...data, rubric: e.target.value })} /></div>
       </div>
     );
   }
@@ -655,10 +656,10 @@ function ContentFields({ type, data, onChange }) {
             <input className="input" value={q.id || ''} onChange={(e) => onChange({ ...data, questions: questions.map((it, i) => (i === idx ? { ...it, id: e.target.value } : it)) })} />
             <select className="input" value={q.type || 'text'} onChange={(e) => onChange({ ...data, questions: questions.map((it, i) => (i === idx ? { ...it, type: e.target.value } : it)) })}><option value="text">Text</option><option value="scale_5">Scale 1-5</option><option value="single_choice">Single Choice</option></select>
             <input className="input" value={q.prompt || ''} onChange={(e) => onChange({ ...data, questions: questions.map((it, i) => (i === idx ? { ...it, prompt: e.target.value } : it)) })} />
-            <button className="btn btn--danger btn--sm" onClick={() => onChange({ ...data, questions: questions.filter((_, i) => i !== idx) })}>Xoá</button>
+            <button className="btn btn--danger btn--sm" onClick={() => onChange({ ...data, questions: questions.filter((_, i) => i !== idx) })}>{t('learnerPages.editorPages.delete')}</button>
           </div>
         ))}
-        <button className="btn btn--secondary btn--sm" onClick={() => onChange({ ...data, questions: [...questions, { id: `q${questions.length + 1}`, type: 'text', prompt: '' }] })}>+ Câu hỏi</button>
+        <button className="btn btn--secondary btn--sm" onClick={() => onChange({ ...data, questions: [...questions, { id: `q${questions.length + 1}`, type: 'text', prompt: '' }] })}>+ {t('learnerPages.editorPages.addQuestion')}</button>
       </div>
     );
   }
@@ -666,11 +667,11 @@ function ContentFields({ type, data, onChange }) {
   if (type === 'live_session') {
     return (
       <div className="admin-form__grid">
-        <div className="input-group admin-form__full"><label className="input-label">Meeting URL</label><input className="input" value={data.meetingUrl || ''} onChange={(e) => onChange({ ...data, meetingUrl: e.target.value })} /></div>
-        <div className="input-group"><label className="input-label">Start At (ISO)</label><input className="input" value={data.startAt || ''} onChange={(e) => onChange({ ...data, startAt: e.target.value })} /></div>
-        <div className="input-group"><label className="input-label">End At (ISO)</label><input className="input" value={data.endAt || ''} onChange={(e) => onChange({ ...data, endAt: e.target.value })} /></div>
-        <div className="input-group"><label className="input-label">Host</label><input className="input" value={data.host || ''} onChange={(e) => onChange({ ...data, host: e.target.value })} /></div>
-        <div className="input-group admin-form__full"><label className="input-label">Notes</label><textarea className="input" rows={4} value={data.notes || ''} onChange={(e) => onChange({ ...data, notes: e.target.value })} /></div>
+        <div className="input-group admin-form__full"><label className="input-label">{t('learnerPages.editorPages.meetingUrl')}</label><input className="input" value={data.meetingUrl || ''} onChange={(e) => onChange({ ...data, meetingUrl: e.target.value })} /></div>
+        <div className="input-group"><label className="input-label">{t('learnerPages.editorPages.startAtIso')}</label><input className="input" value={data.startAt || ''} onChange={(e) => onChange({ ...data, startAt: e.target.value })} /></div>
+        <div className="input-group"><label className="input-label">{t('learnerPages.editorPages.endAtIso')}</label><input className="input" value={data.endAt || ''} onChange={(e) => onChange({ ...data, endAt: e.target.value })} /></div>
+        <div className="input-group"><label className="input-label">{t('learnerPages.editorPages.host')}</label><input className="input" value={data.host || ''} onChange={(e) => onChange({ ...data, host: e.target.value })} /></div>
+        <div className="input-group admin-form__full"><label className="input-label">{t('learnerPages.editorPages.notes')}</label><textarea className="input" rows={4} value={data.notes || ''} onChange={(e) => onChange({ ...data, notes: e.target.value })} /></div>
       </div>
     );
   }
@@ -683,12 +684,12 @@ function ContentFields({ type, data, onChange }) {
           <div key={card.id || idx} className="card" style={{ marginBottom: 10 }}>
             <div style={{ display: 'grid', gridTemplateColumns: '120px 1fr auto', gap: 8, marginBottom: 8 }}>
               <input className="input" value={card.id || ''} onChange={(e) => onChange({ ...data, cards: cards.map((it, i) => (i === idx ? { ...it, id: e.target.value } : it)) })} placeholder="id" />
-              <input className="input" value={card.front || ''} onChange={(e) => onChange({ ...data, cards: cards.map((it, i) => (i === idx ? { ...it, front: e.target.value } : it)) })} placeholder="Mặt trước / câu hỏi" />
-              <button className="btn btn--danger btn--sm" onClick={() => onChange({ ...data, cards: cards.filter((_, i) => i !== idx) })}>Xoá</button>
+              <input className="input" value={card.front || ''} onChange={(e) => onChange({ ...data, cards: cards.map((it, i) => (i === idx ? { ...it, front: e.target.value } : it)) })} placeholder={t('learnerPages.editorPages.frontQuestion')} />
+              <button className="btn btn--danger btn--sm" onClick={() => onChange({ ...data, cards: cards.filter((_, i) => i !== idx) })}>{t('learnerPages.editorPages.delete')}</button>
             </div>
             {[0, 1, 2, 3].map((optIdx) => (
               <div key={optIdx} style={{ display: 'grid', gridTemplateColumns: '80px 1fr', gap: 8, marginBottom: 6 }}>
-                <span style={{ fontSize: 12, color: 'var(--color-text-muted)', alignSelf: 'center' }}>Đáp án {optIdx + 1}</span>
+                <span style={{ fontSize: 12, color: 'var(--color-text-muted)', alignSelf: 'center' }}>{t('learnerPages.editorPages.answerN').replace('{index}', String(optIdx + 1))}</span>
                 <input
                   className="input"
                   value={(card.options || [])[optIdx] || ''}
@@ -700,12 +701,12 @@ function ContentFields({ type, data, onChange }) {
               </div>
             ))}
             <div className="admin-form__grid">
-              <div className="input-group"><label className="input-label">Đáp án đúng</label><select className="input" value={card.correctIndex || 0} onChange={(e) => onChange({ ...data, cards: cards.map((it, i) => (i === idx ? { ...it, correctIndex: Number(e.target.value) } : it)) })}>{[0, 1, 2, 3].map((i) => <option key={i} value={i}>Đáp án {i + 1}</option>)}</select></div>
-              <div className="input-group"><label className="input-label">Giải thích</label><input className="input" value={card.explanation || ''} onChange={(e) => onChange({ ...data, cards: cards.map((it, i) => (i === idx ? { ...it, explanation: e.target.value } : it)) })} /></div>
+              <div className="input-group"><label className="input-label">{t('learnerPages.editorPages.correctAnswer')}</label><select className="input" value={card.correctIndex || 0} onChange={(e) => onChange({ ...data, cards: cards.map((it, i) => (i === idx ? { ...it, correctIndex: Number(e.target.value) } : it)) })}>{[0, 1, 2, 3].map((i) => <option key={i} value={i}>{t('learnerPages.editorPages.answerN').replace('{index}', String(i + 1))}</option>)}</select></div>
+              <div className="input-group"><label className="input-label">{t('learnerPages.editorPages.explanation')}</label><input className="input" value={card.explanation || ''} onChange={(e) => onChange({ ...data, cards: cards.map((it, i) => (i === idx ? { ...it, explanation: e.target.value } : it)) })} /></div>
             </div>
           </div>
         ))}
-        <button className="btn btn--secondary btn--sm" onClick={() => onChange({ ...data, cards: [...cards, { id: `card_${cards.length + 1}`, front: '', options: ['', '', '', ''], correctIndex: 0, explanation: '' }] })}>+ Thẻ</button>
+        <button className="btn btn--secondary btn--sm" onClick={() => onChange({ ...data, cards: [...cards, { id: `card_${cards.length + 1}`, front: '', options: ['', '', '', ''], correctIndex: 0, explanation: '' }] })}>+ {t('learnerPages.editorPages.addCard')}</button>
       </div>
     );
   }
@@ -716,6 +717,7 @@ function ContentFields({ type, data, onChange }) {
 export default function EditorDashboard() {
   const { user } = useAuth();
   const { toast, showToast } = useToast();
+  const { t } = useI18n();
   const navigate = useNavigate();
   const [params, setParams] = useSearchParams();
   const tab = params.get('tab') || 'overview';
@@ -785,7 +787,7 @@ export default function EditorDashboard() {
       setSelectedContentId('');
       setContentTitle('');
       setContentData(defaultDataByType(type));
-      showToast(error?.message || 'Không thể tải danh sách content');
+      showToast(error?.message || t('learnerPages.editorPages.toastLoadContentListFail'));
     } finally {
       setLoadingContent(false);
     }
@@ -802,7 +804,7 @@ export default function EditorDashboard() {
       setContentTitle(title || '');
       setContentData(sanitizeDataByType(type, rest));
     } catch (error) {
-      showToast(error?.message || 'Không thể tải chi tiết content');
+      showToast(error?.message || t('learnerPages.editorPages.toastLoadContentDetailFail'));
     } finally {
       setLoadingContent(false);
     }
@@ -867,18 +869,18 @@ export default function EditorDashboard() {
   }, []);
 
   const contentTypeMeta = useMemo(() => Object.fromEntries(
-    CONTENT_TYPE_OPTIONS.map((item) => [item.type, item])
-  ), []);
+    CONTENT_TYPE_OPTIONS.map((item) => [item.type, { ...item, label: t(item.labelKey) }])
+  ), [t]);
 
   const handleCreateCourse = async (form) => {
     const { continueToBuilder = true, ...payload } = form;
     try {
       const response = await createCourseByScope('editor', payload);
       setCourses((prev) => [...prev, response.course]);
-      showToast('✅ Đã tạo khoá học');
+      showToast(`✅ ${t('learnerPages.editorPages.toastCreateCourseOk')}`);
       if (continueToBuilder) openBuilderForCourse(response.course.id);
     } catch (error) {
-      showToast(error?.message || '❌ Không thể tạo khoá học');
+      showToast(error?.message || `❌ ${t('learnerPages.editorPages.toastCreateCourseFail')}`);
     } finally {
       setShowCourseModal(false);
     }
@@ -888,9 +890,9 @@ export default function EditorDashboard() {
     try {
       const response = await toggleCoursePublish(courseId);
       setCourses((prev) => prev.map((course) => (course.id === courseId ? response.course : course)));
-      showToast(response.course.status === COURSE_STATUS.PUBLISHED ? '✅ Đã xuất bản' : '↩️ Đã chuyển về nháp');
+      showToast(response.course.status === COURSE_STATUS.PUBLISHED ? `✅ ${t('learnerPages.editorPages.toastPublishOk')}` : `↩️ ${t('learnerPages.editorPages.toastDraftOk')}`);
     } catch {
-      showToast('⚠️ Không thể cập nhật trạng thái');
+      showToast(`⚠️ ${t('learnerPages.editorPages.toastUpdateStatusFail')}`);
     }
   };
 
@@ -905,15 +907,15 @@ export default function EditorDashboard() {
   }, [assignmentForm.courseId, assignmentForm.userId, courses, learners]);
 
   const handleAssignCourse = async () => {
-    if (!assignmentForm.courseId) return showToast('⚠️ Chọn khoá học đã xuất bản');
-    if (!assignmentForm.userId) return showToast('⚠️ Chọn học viên');
+    if (!assignmentForm.courseId) return showToast(`⚠️ ${t('learnerPages.editorPages.toastSelectPublishedCourse')}`);
+    if (!assignmentForm.userId) return showToast(`⚠️ ${t('learnerPages.editorPages.toastSelectLearner')}`);
     try {
       const response = await assignCourseByEditor(assignmentForm);
       const created = Array.isArray(response.assignments) ? response.assignments : [];
       setAssignments((prev) => [...created, ...prev]);
-      showToast('✅ Đã gán khoá học');
+      showToast(`✅ ${t('learnerPages.editorPages.toastAssignOk')}`);
     } catch (error) {
-      showToast(error?.message || '❌ Không thể gán khoá học');
+      showToast(error?.message || `❌ ${t('learnerPages.editorPages.toastAssignFail')}`);
     }
   };
 
@@ -929,7 +931,7 @@ export default function EditorDashboard() {
     if (!activeContentType || !selectedContentId) return;
     const title = contentTitle.trim();
     if (!title) {
-      showToast('⚠️ Tiêu đề content là bắt buộc');
+      showToast(`⚠️ ${t('learnerPages.editorPages.toastContentTitleRequired')}`);
       return;
     }
 
@@ -938,27 +940,27 @@ export default function EditorDashboard() {
         title,
         data: buildPayloadByType(activeContentType, contentData),
       });
-      showToast('✅ Đã lưu content');
+      showToast(`✅ ${t('learnerPages.editorPages.toastSaveContentOk')}`);
       await Promise.all([loadCatalogSummary(), loadContentList(activeContentType)]);
       await loadContentDetail(activeContentType, selectedContentId);
     } catch (error) {
-      showToast(error?.message || '❌ Không thể lưu content');
+      showToast(error?.message || `❌ ${t('learnerPages.editorPages.toastSaveContentFail')}`);
     }
   };
 
   const handleDeleteContent = async () => {
     if (!activeContentType || !selectedContentId) return;
-    if (!window.confirm(`Xóa content ${selectedContentId}?`)) return;
+    if (!window.confirm(t('learnerPages.editorPages.confirmDeleteContent').replace('{id}', selectedContentId))) return;
 
     try {
       await deleteCourseContent(activeContentType, selectedContentId);
-      showToast('✅ Đã xóa content');
+      showToast(`✅ ${t('learnerPages.editorPages.toastDeleteContentOk')}`);
       setSelectedContentId('');
       setContentTitle('');
       setContentData(defaultDataByType(activeContentType));
       await Promise.all([loadCatalogSummary(), loadContentList(activeContentType)]);
     } catch (error) {
-      showToast(error?.message || '❌ Không thể xóa content (có thể đang được khóa học sử dụng)');
+      showToast(error?.message || `❌ ${t('learnerPages.editorPages.toastDeleteContentFail')}`);
     }
   };
 
@@ -969,7 +971,7 @@ export default function EditorDashboard() {
     const forcedId = createContentForm.id.trim();
 
     if (!type || !title) {
-      showToast('⚠️ Thiếu type hoặc title');
+      showToast(`⚠️ ${t('learnerPages.editorPages.toastMissingTypeOrTitle')}`);
       return;
     }
 
@@ -980,7 +982,7 @@ export default function EditorDashboard() {
         data: buildPayloadByType(type, createContentData),
       });
       const createdId = response.content?.id;
-      showToast('✅ Đã tạo content');
+      showToast(`✅ ${t('learnerPages.editorPages.toastCreateContentOk')}`);
       setShowCreateContentModal(false);
       setCreateContentForm({ type, id: '', title: '' });
       setCreateContentData(defaultDataByType(type));
@@ -996,19 +998,19 @@ export default function EditorDashboard() {
         await loadContentDetail(type, createdId);
       }
     } catch (error) {
-      showToast(error?.message || '❌ Không thể tạo content');
+      showToast(error?.message || `❌ ${t('learnerPages.editorPages.toastCreateContentFail')}`);
     }
   };
 
-  if (loading) return <AdminLayout title="Biên tập nội dung"><div className="skeleton skeleton-card" /></AdminLayout>;
+  if (loading) return <AdminLayout title={t('learnerPages.editorPages.dashboardTitle')}><div className="skeleton skeleton-card" /></AdminLayout>;
 
   return (
-    <AdminLayout title="Biên tập nội dung">
-      <h2 style={{ fontSize: 24, fontWeight: 800, marginBottom: 4 }}>Xin chào, {user?.name}</h2>
-      <p style={{ fontSize: 14, color: 'var(--color-text-muted)', marginBottom: 20 }}>Vai trò: Biên tập nội dung</p>
+    <AdminLayout title={t('learnerPages.editorPages.dashboardTitle')}>
+      <h2 style={{ fontSize: 24, fontWeight: 800, marginBottom: 4 }}>{t('learnerPages.editorPages.hello').replace('{name}', user?.name || '')}</h2>
+      <p style={{ fontSize: 14, color: 'var(--color-text-muted)', marginBottom: 20 }}>{t('learnerPages.editorPages.role')}</p>
 
       <div className="tabs" style={{ marginBottom: 20 }}>
-        {[{ key: 'overview', label: '📊 Tổng quan' }, { key: 'courses', label: '📚 Khoá học' }, { key: 'content', label: '📝 Nội dung' }, { key: 'publish', label: '✅ Xuất bản' }, { key: 'distribution', label: '📤 Phân phối' }].map((item) => (
+        {[{ key: 'overview', label: `📊 ${t('learnerPages.editorPages.tabOverview')}` }, { key: 'courses', label: `📚 ${t('learnerPages.editorPages.tabCourses')}` }, { key: 'content', label: `📝 ${t('learnerPages.editorPages.tabContent')}` }, { key: 'publish', label: `✅ ${t('learnerPages.editorPages.tabPublish')}` }, { key: 'distribution', label: `📤 ${t('learnerPages.editorPages.tabDistribution')}` }].map((item) => (
           <button key={item.key} className={`tab${tab === item.key ? ' tab--active' : ''}`} onClick={() => changeTab(item.key)}>{item.label}</button>
         ))}
       </div>
@@ -1016,16 +1018,16 @@ export default function EditorDashboard() {
       {tab === 'overview' && (
         <>
           <div className="grid-3" style={{ marginBottom: 20 }}>
-            <div className="stat-card"><div className="stat-card__label">Tổng khoá</div><div className="stat-card__value">{courses.length}</div></div>
-            <div className="stat-card"><div className="stat-card__label">Đã XB</div><div className="stat-card__value">{courses.filter((course) => course.status === COURSE_STATUS.PUBLISHED).length}</div></div>
-            <div className="stat-card"><div className="stat-card__label">Nháp</div><div className="stat-card__value">{courses.filter((course) => course.status === COURSE_STATUS.DRAFT).length}</div></div>
+            <div className="stat-card"><div className="stat-card__label">{t('learnerPages.editorPages.statsTotalCourses')}</div><div className="stat-card__value">{courses.length}</div></div>
+            <div className="stat-card"><div className="stat-card__label">{t('learnerPages.editorPages.statsPublished')}</div><div className="stat-card__value">{courses.filter((course) => course.status === COURSE_STATUS.PUBLISHED).length}</div></div>
+            <div className="stat-card"><div className="stat-card__label">{t('learnerPages.editorPages.statsDraft')}</div><div className="stat-card__value">{courses.filter((course) => course.status === COURSE_STATUS.DRAFT).length}</div></div>
           </div>
-          <h3 style={{ fontSize: 16, fontWeight: 700, marginBottom: 12 }}>Khoá học</h3>
+          <h3 style={{ fontSize: 16, fontWeight: 700, marginBottom: 12 }}>{t('learnerPages.editorPages.coursesTitle')}</h3>
           {courses.map((course) => (
             <div key={course.id} className="card card--hoverable" style={{ marginBottom: 8 }} onClick={() => openBuilderForCourse(course.id)}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <div><div style={{ fontWeight: 700 }}>{course.title}</div><div style={{ fontSize: 12, color: 'var(--color-text-muted)' }}>{course.moduleCount} module · {course.duration}p</div></div>
-                <span className={`badge ${course.status === COURSE_STATUS.PUBLISHED ? 'badge--success' : 'badge--warning'}`}>{formatCourseStatusLabel(course.status)}</span>
+                <span className={`badge ${course.status === COURSE_STATUS.PUBLISHED ? 'badge--success' : 'badge--warning'}`}>{formatCourseStatusLabel(course.status, t)}</span>
               </div>
             </div>
           ))}
@@ -1038,19 +1040,19 @@ export default function EditorDashboard() {
           onOpenCourse={openBuilderForCourse}
           onOpenBuilder={openBuilderForCourse}
           onOpenCreateCourse={() => setShowCourseModal(true)}
-          renderActions={() => (<><button className="btn btn--ghost btn--sm">✏️ Sửa</button><button className="btn btn--ghost btn--sm">👁️ Xem</button></>)}
+          renderActions={() => (<><button className="btn btn--ghost btn--sm">✏️ {t('learnerPages.editorPages.edit')}</button><button className="btn btn--ghost btn--sm">👁️ {t('learnerPages.editorPages.view')}</button></>)}
         />
       )}
 
       {tab === 'content' && (
         <div>
-          <div className="admin-toolbar"><h3 className="admin-toolbar__title">Nguồn content</h3><button className="btn btn--primary" onClick={() => setShowCreateContentModal(true)}>+ Tạo content</button></div>
+          <div className="admin-toolbar"><h3 className="admin-toolbar__title">{t('learnerPages.editorPages.contentSource')}</h3><button className="btn btn--primary" onClick={() => setShowCreateContentModal(true)}>+ {t('learnerPages.editorPages.createContent')}</button></div>
           <div className="grid-2" style={{ marginBottom: 12 }}>
             {CONTENT_TYPE_OPTIONS.map((item) => (
               <div key={item.type} className="card" style={{ border: activeContentType === item.type ? '2px solid var(--color-primary)' : undefined }}>
                 <div style={{ fontWeight: 700, marginBottom: 4 }}>{item.icon} {item.label}</div>
                 <div style={{ fontSize: 13, color: 'var(--color-text-muted)' }}>{(catalogSummary[item.type] || []).length} item</div>
-                <button className="btn btn--ghost btn--sm" style={{ marginTop: 8 }} onClick={() => openContentManager(item.type)}>Quản lý</button>
+                <button className="btn btn--ghost btn--sm" style={{ marginTop: 8 }} onClick={() => openContentManager(item.type)}>{t('learnerPages.editorPages.manage')}</button>
               </div>
             ))}
           </div>
@@ -1060,11 +1062,11 @@ export default function EditorDashboard() {
               <h4 className="card__title" style={{ marginBottom: 10 }}>{contentTypeMeta[activeContentType]?.icon} {contentTypeMeta[activeContentType]?.label}</h4>
               <div style={{ display: 'grid', gridTemplateColumns: 'minmax(260px, 320px) 1fr', gap: 12 }}>
                 <div>
-                  <div style={{ fontWeight: 700, marginBottom: 8 }}>Danh sách ({contentItems.length})</div>
+                  <div style={{ fontWeight: 700, marginBottom: 8 }}>{t('learnerPages.editorPages.contentList').replace('{count}', String(contentItems.length))}</div>
                   {loadingContent && contentItems.length === 0 ? (
                     <div className="skeleton skeleton-card" />
                   ) : contentItems.length === 0 ? (
-                    <div className="empty-state"><div className="empty-state__title">Chưa có content</div></div>
+                    <div className="empty-state"><div className="empty-state__title">{t('learnerPages.editorPages.noContent')}</div></div>
                   ) : (
                     contentItems.map((item) => (
                       <button key={item.id} className={`btn btn--full ${selectedContentId === item.id ? 'btn--primary' : 'btn--secondary'}`} style={{ marginBottom: 6, justifyContent: 'flex-start' }} onClick={() => loadContentDetail(activeContentType, item.id)}>
@@ -1076,15 +1078,15 @@ export default function EditorDashboard() {
 
                 <div>
                   {!selectedContentId ? (
-                    <div className="empty-state"><div className="empty-state__title">Chọn một content để chỉnh sửa</div></div>
+                    <div className="empty-state"><div className="empty-state__title">{t('learnerPages.editorPages.selectContentToEdit')}</div></div>
                   ) : (
                     <>
-                      <div className="input-group" style={{ marginBottom: 8 }}><label className="input-label">ID</label><input className="input" value={selectedContentId} disabled /></div>
-                      <div className="input-group" style={{ marginBottom: 12 }}><label className="input-label">Tiêu đề</label><input className="input" value={contentTitle} onChange={(e) => setContentTitle(e.target.value)} /></div>
-                      <ContentFields type={activeContentType} data={contentData} onChange={setContentData} />
+                      <div className="input-group" style={{ marginBottom: 8 }}><label className="input-label">{t('learnerPages.editorPages.idLabel')}</label><input className="input" value={selectedContentId} disabled /></div>
+                      <div className="input-group" style={{ marginBottom: 12 }}><label className="input-label">{t('learnerPages.editorPages.contentTitle')}</label><input className="input" value={contentTitle} onChange={(e) => setContentTitle(e.target.value)} /></div>
+                      <ContentFields type={activeContentType} data={contentData} onChange={setContentData} t={t} />
                       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 12 }}>
-                        <button className="btn btn--primary" onClick={handleSaveContent}>💾 Lưu content</button>
-                        <button className="btn btn--danger" onClick={handleDeleteContent}>🗑️ Xoá content</button>
+                        <button className="btn btn--primary" onClick={handleSaveContent}>💾 {t('learnerPages.editorPages.saveContent')}</button>
+                        <button className="btn btn--danger" onClick={handleDeleteContent}>🗑️ {t('learnerPages.editorPages.deleteContent')}</button>
                       </div>
                     </>
                   )}
@@ -1100,8 +1102,8 @@ export default function EditorDashboard() {
           {courses.map((course) => (
             <div key={course.id} className="card" style={{ marginBottom: 8 }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <div><div style={{ fontWeight: 700 }}>{course.title}</div><span className={`badge ${course.status === COURSE_STATUS.PUBLISHED ? 'badge--success' : 'badge--warning'}`}>{formatCourseStatusLabel(course.status)}</span></div>
-                <button className={`btn btn--sm ${course.status === COURSE_STATUS.PUBLISHED ? 'btn--secondary' : 'btn--success'}`} onClick={() => togglePublish(course.id)}>{course.status === COURSE_STATUS.PUBLISHED ? 'Hủy xuất bản' : 'Xuất bản'}</button>
+                <div><div style={{ fontWeight: 700 }}>{course.title}</div><span className={`badge ${course.status === COURSE_STATUS.PUBLISHED ? 'badge--success' : 'badge--warning'}`}>{formatCourseStatusLabel(course.status, t)}</span></div>
+                <button className={`btn btn--sm ${course.status === COURSE_STATUS.PUBLISHED ? 'btn--secondary' : 'btn--success'}`} onClick={() => togglePublish(course.id)}>{course.status === COURSE_STATUS.PUBLISHED ? t('learnerPages.editorPages.unpublish') : t('learnerPages.editorPages.tabPublish')}</button>
               </div>
             </div>
           ))}
@@ -1111,13 +1113,13 @@ export default function EditorDashboard() {
       {tab === 'distribution' && (
         <div>
           <div className="card" style={{ marginBottom: 16 }}>
-            <h3 className="card__title" style={{ marginBottom: 12 }}>Giao học viên (Editor)</h3>
+            <h3 className="card__title" style={{ marginBottom: 12 }}>{t('learnerPages.editorPages.distributionTitle')}</h3>
             <p style={{ fontSize: 13, color: 'var(--color-text-muted)', marginBottom: 12 }}>
-              Chỉ gán theo học viên và chỉ cho khoá học đã xuất bản.
+              {t('learnerPages.editorPages.distributionDesc')}
             </p>
             <div className="admin-form__grid">
               <div className="input-group">
-                <label className="input-label">Khoá học đã xuất bản</label>
+                <label className="input-label">{t('learnerPages.editorPages.publishedCourse')}</label>
                 <select className="input" value={assignmentForm.courseId} onChange={(event) => setAssignmentForm((prev) => ({ ...prev, courseId: event.target.value }))}>
                   {courses.filter((course) => course.status === COURSE_STATUS.PUBLISHED).map((course) => (
                     <option key={course.id} value={course.id}>{course.title}</option>
@@ -1125,32 +1127,32 @@ export default function EditorDashboard() {
                 </select>
               </div>
               <div className="input-group">
-                <label className="input-label">Học viên</label>
+                <label className="input-label">{t('learnerPages.editorPages.learner')}</label>
                 <select className="input" value={assignmentForm.userId} onChange={(event) => setAssignmentForm((prev) => ({ ...prev, userId: event.target.value }))}>
                   {learners.map((item) => <option key={item.id} value={item.id}>{item.name} - {item.department}</option>)}
                 </select>
               </div>
               <div className="input-group">
-                <label className="input-label">Hạn hoàn thành</label>
+                <label className="input-label">{t('learnerPages.editorPages.dueDate')}</label>
                 <input className="input" type="date" value={assignmentForm.dueDate} onChange={(event) => setAssignmentForm((prev) => ({ ...prev, dueDate: event.target.value }))} />
               </div>
             </div>
             <label style={{ display: 'inline-flex', alignItems: 'center', gap: 8, marginTop: 8, marginBottom: 12 }}>
               <input type="checkbox" checked={assignmentForm.required} onChange={(event) => setAssignmentForm((prev) => ({ ...prev, required: event.target.checked }))} />
-              Bắt buộc hoàn thành
+              {t('learnerPages.editorPages.requiredComplete')}
             </label>
             <div>
-              <button className="btn btn--primary" onClick={handleAssignCourse}>📤 Giao học viên</button>
+              <button className="btn btn--primary" onClick={handleAssignCourse}>📤 {t('learnerPages.editorPages.assignLearner')}</button>
             </div>
           </div>
 
           <div className="card">
-            <h3 className="card__title" style={{ marginBottom: 12 }}>Lịch sử gán ({assignments.length})</h3>
+            <h3 className="card__title" style={{ marginBottom: 12 }}>{t('learnerPages.editorPages.assignHistory').replace('{count}', String(assignments.length))}</h3>
             {assignments.slice(0, 20).map((assignment) => (
               <div key={assignment.id} style={{ padding: '10px 0', borderBottom: '1px solid var(--color-border)' }}>
                 <div style={{ fontWeight: 700 }}>{assignment.courseName}</div>
                 <div style={{ fontSize: 13, color: 'var(--color-text-muted)' }}>
-                  {assignment.userName} · Hạn: {assignment.dueDate || 'Không hạn'} · {assignment.required ? 'Bắt buộc' : 'Tự chọn'}
+                  {assignment.userName} · {t('learnerPages.editorPages.dueDate')}: {assignment.dueDate || t('learnerPages.editorPages.noDeadline')} · {assignment.required ? t('learnerPages.editorPages.requiredComplete') : t('learnerPages.editorPages.optional')}
                 </div>
               </div>
             ))}
@@ -1164,16 +1166,16 @@ export default function EditorDashboard() {
 
       <Modal open={showCreateContentModal} onClose={() => setShowCreateContentModal(false)}>
         <form onSubmit={handleCreateContent} className="admin-form">
-          <h3 className="admin-form__title">➕ Tạo content mới</h3>
+          <h3 className="admin-form__title">➕ {t('learnerPages.editorPages.createContentTitle')}</h3>
           <div className="admin-form__grid">
-            <div className="input-group"><label className="input-label">Loại content</label><select className="input" value={createContentForm.type} onChange={(e) => { const nextType = e.target.value; setCreateContentForm((prev) => ({ ...prev, type: nextType })); setCreateContentData(defaultDataByType(nextType)); }}>{CONTENT_TYPE_OPTIONS.map((item) => <option key={item.type} value={item.type}>{item.label}</option>)}</select></div>
-            <div className="input-group"><label className="input-label">ID (tuỳ chọn)</label><input className="input" value={createContentForm.id} onChange={(e) => setCreateContentForm((prev) => ({ ...prev, id: e.target.value }))} placeholder="Để trống để auto-generate" /></div>
-            <div className="input-group admin-form__full"><label className="input-label">Tiêu đề *</label><input className="input" value={createContentForm.title} onChange={(e) => setCreateContentForm((prev) => ({ ...prev, title: e.target.value }))} required /></div>
+            <div className="input-group"><label className="input-label">{t('learnerPages.editorPages.contentType')}</label><select className="input" value={createContentForm.type} onChange={(e) => { const nextType = e.target.value; setCreateContentForm((prev) => ({ ...prev, type: nextType })); setCreateContentData(defaultDataByType(nextType)); }}>{CONTENT_TYPE_OPTIONS.map((item) => <option key={item.type} value={item.type}>{item.label}</option>)}</select></div>
+            <div className="input-group"><label className="input-label">{t('learnerPages.editorPages.idOptional')}</label><input className="input" value={createContentForm.id} onChange={(e) => setCreateContentForm((prev) => ({ ...prev, id: e.target.value }))} placeholder={t('learnerPages.editorPages.idPlaceholder')} /></div>
+            <div className="input-group admin-form__full"><label className="input-label">{t('learnerPages.editorPages.contentTitle')} *</label><input className="input" value={createContentForm.title} onChange={(e) => setCreateContentForm((prev) => ({ ...prev, title: e.target.value }))} required /></div>
           </div>
           <div style={{ marginTop: 12, marginBottom: 12 }}>
             <ContentFields type={createContentForm.type} data={createContentData} onChange={setCreateContentData} />
           </div>
-          <div className="admin-form__actions"><button type="button" className="btn btn--secondary" onClick={() => setShowCreateContentModal(false)}>Huỷ</button><button type="submit" className="btn btn--primary">✅ Tạo content</button></div>
+          <div className="admin-form__actions"><button type="button" className="btn btn--secondary" onClick={() => setShowCreateContentModal(false)}>{t('common.cancel')}</button><button type="submit" className="btn btn--primary">✅ {t('learnerPages.editorPages.createContentSubmit')}</button></div>
         </form>
       </Modal>
 

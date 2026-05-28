@@ -1,10 +1,15 @@
-import { useEffect, useState } from 'react';
+﻿import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getLearningState } from '../../utils/auth.js';
 import { courses } from '../../data/mockCourses.js';
 import { getOfflineLibrary, syncOfflineLibrary } from '../../api/services/engagement.js';
 import { useToast } from '../../hooks/useToast.js';
 import LearnerLayout from '../../components/layout/LearnerLayout.jsx';
+import { useI18n } from '../../i18n/index.jsx';
+
+function f(template, values) {
+  return Object.entries(values).reduce((acc, [key, value]) => acc.replaceAll(`{${key}}`, String(value)), template);
+}
 
 function fallbackOffline() {
   const ls = getLearningState();
@@ -29,6 +34,7 @@ function fallbackOffline() {
 export default function OfflineLibrary() {
   const navigate = useNavigate();
   const { toast, showToast } = useToast();
+  const { t } = useI18n();
   const [loading, setLoading] = useState(true);
   const [data, setData] = useState({ items: [], summary: { total: 0, storageMB: 0 } });
 
@@ -46,8 +52,7 @@ export default function OfflineLibrary() {
         if (!mounted) return;
         setData(fallbackOffline());
       } finally {
-        if (!mounted) return;
-        setLoading(false);
+        if (mounted) setLoading(false);
       }
     }
     load();
@@ -57,9 +62,9 @@ export default function OfflineLibrary() {
   const handleSync = async () => {
     try {
       await syncOfflineLibrary();
-      showToast('🔄 Đã đồng bộ hoá');
+      showToast(`🔄 ${t('learnerPages.offline.syncOk')}`);
     } catch {
-      showToast('🔄 Đồng bộ hoá... (mock)');
+      showToast(`🔄 ${t('learnerPages.offline.syncMock')}`);
     }
   };
 
@@ -67,7 +72,7 @@ export default function OfflineLibrary() {
   const storageMB = data.summary?.storageMB || 0;
 
   return (
-    <LearnerLayout topBar={<div className="page__header"><div className="page__title">Thư viện ngoại tuyến</div></div>}>
+    <LearnerLayout topBar={<div className="page__header"><div className="page__title">{t('learnerPages.offline.title')}</div></div>}>
       <div style={{ padding: 16 }}>
         {loading ? (
           <div className="skeleton skeleton-card" />
@@ -75,24 +80,24 @@ export default function OfflineLibrary() {
           <>
             <div className="card" style={{ marginBottom: 20 }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <div><div style={{ fontWeight: 700, fontSize: 16 }}>📥 {downloads.length} nội dung</div><div style={{ fontSize: 13, color: 'var(--color-text-muted)' }}>{storageMB.toFixed(1)} MB đã tải</div></div>
-                <button className="btn btn--primary btn--sm" onClick={handleSync}>🔄 Đồng bộ</button>
+                <div><div style={{ fontWeight: 700, fontSize: 16 }}>📥 {f(t('learnerPages.offline.summary'), { count: downloads.length })}</div><div style={{ fontSize: 13, color: 'var(--color-text-muted)' }}>{f(t('learnerPages.offline.downloadedSize'), { size: storageMB.toFixed(1) })}</div></div>
+                <button className="btn btn--primary btn--sm" onClick={handleSync}>🔄 {t('learnerPages.offline.sync')}</button>
               </div>
             </div>
             {downloads.length === 0 ? (
-              <div className="empty-state"><div className="empty-state__icon">📥</div><div className="empty-state__title">Chưa có nội dung tải về</div><div className="empty-state__desc">Tải nội dung từ khoá học để học ngoại tuyến.</div><button className="btn btn--primary" style={{ marginTop: 16 }} onClick={() => navigate('/learner/explore')}>Khám phá khoá học</button></div>
+              <div className="empty-state"><div className="empty-state__icon">📥</div><div className="empty-state__title">{t('learnerPages.offline.empty')}</div><div className="empty-state__desc">{t('learnerPages.offline.emptyDesc')}</div><button className="btn btn--primary" style={{ marginTop: 16 }} onClick={() => navigate('/learner/explore')}>{t('learnerPages.offline.exploreCourses')}</button></div>
             ) : (
               downloads.map((d) => (
                 <div key={d.id} className="card" style={{ marginBottom: 8 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                     <span style={{ fontSize: 28 }}>📖</span>
-                    <div style={{ flex: 1 }}><div style={{ fontWeight: 700, fontSize: 14 }}>{d.title}</div><div style={{ fontSize: 12, color: 'var(--color-text-muted)' }}>Đã tải · {d.moduleCount} module</div></div>
-                    <span className="badge badge--success">Đã tải</span>
+                    <div style={{ flex: 1 }}><div style={{ fontWeight: 700, fontSize: 14 }}>{d.title}</div><div style={{ fontSize: 12, color: 'var(--color-text-muted)' }}>{f(t('learnerPages.offline.downloadedModules'), { count: d.moduleCount })}</div></div>
+                    <span className="badge badge--success">{t('learnerPages.offline.downloaded')}</span>
                   </div>
                 </div>
               ))
             )}
-            {downloads.length > 0 && <div style={{ marginTop: 16, fontSize: 12, color: 'var(--color-text-muted)', textAlign: 'center' }}>⚠️ Một số nội dung có thể cần đồng bộ lại</div>}
+            {downloads.length > 0 && <div style={{ marginTop: 16, fontSize: 12, color: 'var(--color-text-muted)', textAlign: 'center' }}>⚠️ {t('learnerPages.offline.needSyncHint')}</div>}
           </>
         )}
       </div>

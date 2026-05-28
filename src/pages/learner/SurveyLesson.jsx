@@ -1,16 +1,25 @@
-import { useEffect, useState } from 'react';
+﻿import { useEffect, useState } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { getContentById } from '../../data/mockContent.js';
 import { completeItem } from '../../utils/auth.js';
 import { completeLearningItem } from '../../api/services/learning.js';
 import { useToast } from '../../hooks/useToast.js';
 import LearnerLayout from '../../components/layout/LearnerLayout.jsx';
+import { useI18n } from '../../i18n/index.jsx';
+
+const ICON_OK = '✅';
+const ICON_BACK = '←';
+
+function formatText(template, values) {
+  return Object.entries(values).reduce((acc, [key, value]) => acc.replaceAll(`{${key}}`, String(value)), template);
+}
 
 export default function SurveyLesson() {
   const { contentId } = useParams();
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const { toast, showToast } = useToast();
+  const { t } = useI18n();
 
   const itemId = searchParams.get('itemId');
   const moduleId = searchParams.get('moduleId');
@@ -35,15 +44,15 @@ export default function SurveyLesson() {
       completeItem(resolvedItemId, earnedXp);
     }
     setDone(true);
-    showToast(`✅ Cảm ơn phản hồi của bạn! +${earnedXp} điểm`);
+    showToast(`${ICON_OK} ${formatText(t('learnerPages.survey.thankToast'), { xp: earnedXp })}`);
   };
 
   if (!content) {
-    return <LearnerLayout topBar={<div className="page__header"><div className="page__title">Đang tải...</div></div>}><div className="empty-state">Đang tải...</div></LearnerLayout>;
+    return <LearnerLayout topBar={<div className="page__header"><div className="page__title">{t('common.loading')}</div></div>}><div className="empty-state">{t('common.loading')}</div></LearnerLayout>;
   }
 
   return (
-    <LearnerLayout topBar={<div className="page__header"><button className="btn btn--ghost btn--sm" onClick={handleBack} style={{ marginBottom: 8 }}>← Quay lại</button><div className="page__title">{content.title}</div></div>}>
+    <LearnerLayout topBar={<div className="page__header"><button className="btn btn--ghost btn--sm" onClick={handleBack} style={{ marginBottom: 8 }}>{ICON_BACK} {t('learnerPages.common.back')}</button><div className="page__title">{content.title}</div></div>}>
       <div style={{ padding: 16 }}>
         {(content.questions || []).map((question) => (
           <div key={question.id} className="card" style={{ marginBottom: 10 }}>
@@ -51,9 +60,12 @@ export default function SurveyLesson() {
             <input className="input" value={answers[question.id] || ''} onChange={(e) => setAnswers((prev) => ({ ...prev, [question.id]: e.target.value }))} />
           </div>
         ))}
-        {!done ? <button className="btn btn--primary btn--lg btn--full" onClick={submitSurvey}>Gửi khảo sát</button> : <button className="btn btn--success btn--lg btn--full" onClick={handleBack}>Hoàn tất khảo sát</button>}
+        {!done ? <button className="btn btn--primary btn--lg btn--full" onClick={submitSurvey}>{t('learnerPages.survey.submit')}</button> : <button className="btn btn--success btn--lg btn--full" onClick={handleBack}>{t('learnerPages.survey.done')}</button>}
       </div>
       {toast && <div className="toast">{toast}</div>}
     </LearnerLayout>
   );
 }
+
+
+

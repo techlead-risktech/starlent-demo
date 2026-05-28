@@ -1,8 +1,15 @@
 import { useState, useEffect, useCallback, createContext, useContext } from 'react';
 import { getCurrentUser, logoutUser as logoutUtil } from '../utils/auth.js';
 import { login as loginApi, clearSession } from '../api/services/auth.js';
+import { translations } from '../i18n/translations.js';
 
 const AuthContext = createContext(null);
+const LOCALE_KEY = 'starlent_locale';
+
+function getLoginFailedMessage() {
+  const locale = localStorage.getItem(LOCALE_KEY) === 'en' ? 'en' : 'vi';
+  return translations[locale]?.auth?.loginFailed || translations.vi.auth.loginFailed;
+}
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
@@ -19,7 +26,7 @@ export function AuthProvider({ children }) {
       setUser(data.user);
       return { success: true, user: data.user };
     } catch (error) {
-      return { success: false, error: error?.message || 'Đăng nhập thất bại.' };
+      return { success: false, error: error?.message || getLoginFailedMessage() };
     }
   }, []);
 
@@ -41,4 +48,3 @@ export function useAuth() {
   if (!ctx) throw new Error('useAuth must be used within AuthProvider');
   return ctx;
 }
-

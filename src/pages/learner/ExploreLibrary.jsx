@@ -1,20 +1,21 @@
-import { useEffect, useMemo, useState } from 'react';
+﻿import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { COURSE_STATUS, courses as fallbackCourses, getCourseProgress } from '../../data/mockCourses.js';
 import { getLearningState } from '../../utils/auth.js';
 import { getExploreCourses } from '../../api/services/courses.js';
 import LearnerLayout from '../../components/layout/LearnerLayout.jsx';
-
-const TAG_TABS = ['Tất cả', 'Kỹ năng mềm', 'Bảo mật', 'Năng suất', 'Teamwork'];
+import { useI18n } from '../../i18n/index.jsx';
 
 export default function ExploreLibrary() {
   const navigate = useNavigate();
+  const { t } = useI18n();
   const [query, setQuery] = useState('');
-  const [selectedTab, setSelectedTab] = useState('Tất cả');
+  const [selectedTab, setSelectedTab] = useState(t('learnerPages.explore.all'));
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  const activeTag = selectedTab === 'Tất cả' ? '' : selectedTab;
+  const TAG_TABS = [t('learnerPages.explore.all'), 'Kỹ năng mềm', 'Bảo mật', 'Năng suất', 'Teamwork'];
+  const activeTag = selectedTab === t('learnerPages.explore.all') ? '' : selectedTab;
 
   useEffect(() => {
     let mounted = true;
@@ -34,9 +35,7 @@ export default function ExploreLibrary() {
           .filter((course) => {
             const tagMatch = !activeTag || (course.tags || []).includes(activeTag);
             const q = query.trim().toLowerCase();
-            const queryMatch = !q
-              || course.title.toLowerCase().includes(q)
-              || (course.tags || []).some((tag) => tag.toLowerCase().includes(q));
+            const queryMatch = !q || course.title.toLowerCase().includes(q) || (course.tags || []).some((tag) => tag.toLowerCase().includes(q));
             return tagMatch && queryMatch;
           });
         setItems(fallback);
@@ -47,19 +46,21 @@ export default function ExploreLibrary() {
     }
 
     loadExplore();
-    return () => { mounted = false; };
+    return () => {
+      mounted = false;
+    };
   }, [query, activeTag]);
 
   const emptyMessage = useMemo(() => {
-    if (loading) return 'Đang tải khóa học...';
-    if (query || activeTag) return 'Không tìm thấy khóa học phù hợp';
-    return 'Chưa có khóa học nào';
-  }, [loading, query, activeTag]);
+    if (loading) return t('learnerPages.explore.loading');
+    if (query || activeTag) return t('learnerPages.explore.emptyByFilter');
+    return t('learnerPages.explore.empty');
+  }, [loading, query, activeTag, t]);
 
   return (
-    <LearnerLayout topBar={<div className="page__header"><div className="page__title">Khám phá</div></div>}>
+    <LearnerLayout topBar={<div className="page__header"><div className="page__title">{t('learnerPages.explore.title')}</div></div>}>
       <div style={{ padding: 16 }}>
-        <input className="input" style={{ marginBottom: 16 }} placeholder="🔍 Tìm khóa học..." value={query} onChange={(event) => setQuery(event.target.value)} />
+        <input className="input" style={{ marginBottom: 16 }} placeholder={`📚 ${t('learnerPages.explore.searchPlaceholder')}`} value={query} onChange={(event) => setQuery(event.target.value)} />
         <div className="tabs" style={{ marginBottom: 16 }}>
           {TAG_TABS.map((tab) => (
             <button key={tab} className={`tab${selectedTab === tab ? ' tab--active' : ''}`} onClick={() => setSelectedTab(tab)}>{tab}</button>
@@ -75,15 +76,11 @@ export default function ExploreLibrary() {
             {items.map((course) => (
               <div key={course.id} className="card card--hoverable" onClick={() => navigate(`/learner/course/${course.id}`)}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                  <span style={{ fontSize: 36 }}>📖</span>
+                  <span style={{ fontSize: 36 }}>📚</span>
                   <div style={{ flex: 1 }}>
                     <div style={{ fontWeight: 700, fontSize: 15 }}>{course.title}</div>
-                    <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 4 }}>
-                      {(course.tags || []).map((tag) => <span key={tag} className="chip">{tag}</span>)}
-                    </div>
-                    <div style={{ fontSize: 12, color: 'var(--color-text-muted)', marginTop: 4 }}>
-                      ⏱ {course.duration}p · 📦 {course.moduleCount} · ⭐ {course.rating}
-                    </div>
+                    <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 4 }}>{(course.tags || []).map((tag) => <span key={tag} className="chip">{tag}</span>)}</div>
+                    <div style={{ fontSize: 12, color: 'var(--color-text-muted)', marginTop: 4 }}>⏱ {course.duration}p · 📚 {course.moduleCount} · ⭐ {course.rating}</div>
                   </div>
                 </div>
               </div>
@@ -94,3 +91,6 @@ export default function ExploreLibrary() {
     </LearnerLayout>
   );
 }
+
+
+

@@ -9,23 +9,23 @@ import { getNotificationsForUser } from '../../data/mockChats.js';
 import { getLearnerHome } from '../../api/services/learner.js';
 import LearnerLayout from '../../components/layout/LearnerLayout.jsx';
 import { SkeletonText, SkeletonCard } from '../../components/common/Skeleton.jsx';
+import { useI18n } from '../../i18n/index.jsx';
 
-function Greeting({ name }) {
+function Greeting({ name, t }) {
   const h = new Date().getHours();
-  let g = 'Chào buổi sáng';
-  if (h >= 12 && h < 17) g = 'Chào buổi chiều';
-  else if (h >= 17) g = 'Chào buổi tối';
+  let g = t('learnerPages.dashboard.morning');
+  if (h >= 12 && h < 17) g = t('learnerPages.dashboard.afternoon');
+  else if (h >= 17) g = t('learnerPages.dashboard.evening');
   return <span>{g}, <strong>{name}</strong>!</span>;
 }
 
-const DAY_LABELS = ['T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'CN'];
-
-function StreakStrip({ days }) {
+function StreakStrip({ days, t, locale }) {
+  const dayLabels = locale === 'en' ? ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'] : ['T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'CN'];
   return (
     <div className="card" style={{ padding: 14, marginBottom: 20 }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
-        <div style={{ fontWeight: 700, fontSize: 14 }}>🗓️ 7 ngày gần nhất</div>
-        <div style={{ fontSize: 12, color: 'var(--color-text-muted)' }}>{days.filter((d) => d.studied).length}/7 ngày học</div>
+        <div style={{ fontWeight: 700, fontSize: 14 }}>🗓️ {t('learnerPages.dashboard.last7Days')}</div>
+        <div style={{ fontSize: 12, color: 'var(--color-text-muted)' }}>{t('learnerPages.dashboard.studiedDays').replace('{count}', String(days.filter((d) => d.studied).length))}</div>
       </div>
       <div className="streak-strip">
         {days.map((d, i) => {
@@ -34,7 +34,7 @@ function StreakStrip({ days }) {
           const isToday = i === days.length - 1;
           return (
             <div key={d.date} style={{ textAlign: 'center' }}>
-              <div style={{ fontSize: 10, color: 'var(--color-text-muted)', marginBottom: 4 }}>{DAY_LABELS[dow]}</div>
+              <div style={{ fontSize: 10, color: 'var(--color-text-muted)', marginBottom: 4 }}>{dayLabels[dow]}</div>
               <div
                 className="streak-dot"
                 style={{
@@ -53,22 +53,22 @@ function StreakStrip({ days }) {
   );
 }
 
-function DailyGoalCard({ done, goal, onPick }) {
+function DailyGoalCard({ done, goal, onPick, t }) {
   const pct = Math.min(100, Math.round((done / goal) * 100));
   const reached = done >= goal;
   return (
     <div className="card" style={{ padding: 14, marginBottom: 20, background: reached ? 'linear-gradient(135deg,#ECFDF5,#D1FAE5)' : 'linear-gradient(135deg,#EFF6FF,#DBEAFE)' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
         <div>
-          <div style={{ fontWeight: 700, fontSize: 15 }}>🎯 Mục tiêu hôm nay</div>
+          <div style={{ fontWeight: 700, fontSize: 15 }}>🎯 {t('learnerPages.dashboard.goalToday')}</div>
           <div style={{ fontSize: 13, color: 'var(--color-text-secondary)', marginTop: 2 }}>
-            {reached ? '🎉 Đạt mục tiêu! Tiếp tục phát huy.' : `${done}/${goal} bài đã hoàn thành`}
+            {reached ? `🎉 ${t('learnerPages.dashboard.goalReached')}` : t('learnerPages.dashboard.goalProgress').replace('{done}', String(done)).replace('{goal}', String(goal))}
           </div>
         </div>
         <div style={{ fontSize: 24, fontWeight: 800, color: reached ? 'var(--color-success)' : 'var(--color-secondary)' }}>{pct}%</div>
       </div>
       <div className="progress-bar"><div className="progress-bar__fill" style={{ width: `${pct}%`, background: reached ? 'var(--color-success)' : 'var(--color-secondary)' }} /></div>
-      {!reached && <button className="btn btn--primary btn--full btn--sm" style={{ marginTop: 10 }} onClick={onPick}>⚡ Học nhanh 5 phút</button>}
+      {!reached && <button className="btn btn--primary btn--full btn--sm" style={{ marginTop: 10 }} onClick={onPick}>⚡ {t('learnerPages.dashboard.quick5')}</button>}
     </div>
   );
 }
@@ -89,6 +89,7 @@ export default function LearnerDashboard() {
   const [loading, setLoading] = useState(true);
   const [home, setHome] = useState(null);
   const [ls, setLs] = useState(null);
+  const { t, locale } = useI18n();
 
   useEffect(() => {
     if (!isOnboarded()) {
@@ -105,9 +106,10 @@ export default function LearnerDashboard() {
       } catch {
         // Fallback local-state mode for screens not migrated yet.
       } finally {
-        if (!mounted) return;
-        setLs(getLearningState());
-        setLoading(false);
+        if (mounted) {
+          setLs(getLearningState());
+          setLoading(false);
+        }
       }
     }
 
@@ -168,8 +170,8 @@ export default function LearnerDashboard() {
       topBar={(
         <div className="page__header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <div>
-            <div style={{ fontSize: 14, color: 'var(--color-text-muted)' }}><Greeting name={user?.name?.split(' ').pop()} /></div>
-            <div style={{ fontSize: 24, fontWeight: 800, marginTop: 2 }}>Hôm nay bạn muốn học gì?</div>
+            <div style={{ fontSize: 14, color: 'var(--color-text-muted)' }}><Greeting name={user?.name?.split(' ').pop()} t={t} /></div>
+            <div style={{ fontSize: 24, fontWeight: 800, marginTop: 2 }}>{t('learnerPages.dashboard.whatLearnToday')}</div>
           </div>
           <div style={{ display: 'flex', gap: 8 }}>
             <button className="btn btn--ghost btn--sm" onClick={() => navigate('/learner/notifications')} style={{ position: 'relative' }}>
@@ -180,19 +182,19 @@ export default function LearnerDashboard() {
         </div>
       )}
     >
-      <DailyGoalCard done={daily.done} goal={daily.goal} onPick={handleQuickStart} />
-      <StreakStrip days={days} />
+      <DailyGoalCard done={daily.done} goal={daily.goal} onPick={handleQuickStart} t={t} />
+      <StreakStrip days={days} t={t} locale={locale} />
 
       <div className="grid-4" style={{ marginBottom: 20 }}>
-        <div className="stat-card"><div className="stat-card__label">🔥 Số ngày học liên tiếp</div><div className="stat-card__value">{streak} <span style={{ fontSize: 14 }}>ngày</span></div></div>
-        <div className="stat-card"><div className="stat-card__label">⭐ Tổng điểm kinh nghiệm</div><div className="stat-card__value">{xp.toLocaleString()}</div><div className="progress-bar" style={{ marginTop: 8 }}><div className="progress-bar__fill" style={{ width: `${(xp % 500) / 5}%` }} /></div><div style={{ fontSize: 10, color: 'var(--color-text-muted)', marginTop: 4 }}>Còn {xpToNext} điểm nữa lên cấp {level + 1}</div></div>
-        <div className="stat-card"><div className="stat-card__label">🎯 Cấp độ</div><div className="stat-card__value">{level}</div><div style={{ fontSize: 10, color: 'var(--color-text-muted)', marginTop: 4 }}>{xp.toLocaleString()} điểm</div></div>
-        <div className="stat-card"><div className="stat-card__label">📝 Hôm nay</div><div className="stat-card__value">{daily.done} <span style={{ fontSize: 14 }}>bài</span></div><div style={{ fontSize: 10, color: 'var(--color-text-muted)', marginTop: 4 }}>đã hoàn thành</div></div>
+        <div className="stat-card"><div className="stat-card__label">🔥 {t('learnerPages.dashboard.streakDays')}</div><div className="stat-card__value">{streak} <span style={{ fontSize: 14 }}>{t('learnerPages.dashboard.daysUnit')}</span></div></div>
+        <div className="stat-card"><div className="stat-card__label">⭐ {t('learnerPages.dashboard.totalXp')}</div><div className="stat-card__value">{xp.toLocaleString(locale === 'en' ? 'en-US' : 'vi-VN')}</div><div className="progress-bar" style={{ marginTop: 8 }}><div className="progress-bar__fill" style={{ width: `${(xp % 500) / 5}%` }} /></div><div style={{ fontSize: 10, color: 'var(--color-text-muted)', marginTop: 4 }}>{t('learnerPages.dashboard.xpToNext').replace('{xp}', String(xpToNext)).replace('{level}', String(level + 1))}</div></div>
+        <div className="stat-card"><div className="stat-card__label">🎯 {t('learnerPages.dashboard.level')}</div><div className="stat-card__value">{level}</div><div style={{ fontSize: 10, color: 'var(--color-text-muted)', marginTop: 4 }}>{xp.toLocaleString(locale === 'en' ? 'en-US' : 'vi-VN')} {locale === 'en' ? 'XP' : 'điểm'}</div></div>
+        <div className="stat-card"><div className="stat-card__label">📝 {t('learnerPages.dashboard.today')}</div><div className="stat-card__value">{daily.done} <span style={{ fontSize: 14 }}>{t('learnerPages.dashboard.lessonsUnit')}</span></div><div style={{ fontSize: 10, color: 'var(--color-text-muted)', marginTop: 4 }}>{t('learnerPages.dashboard.doneSuffix')}</div></div>
       </div>
 
       {inProgress.length > 0 && (
         <div style={{ marginBottom: 20 }}>
-          <h3 style={{ fontSize: 18, fontWeight: 700, marginBottom: 12 }}>📖 Tiếp tục học</h3>
+          <h3 style={{ fontSize: 18, fontWeight: 700, marginBottom: 12 }}>📖 {t('learnerPages.dashboard.continueLearning')}</h3>
           <div style={{ display: 'flex', gap: 12, overflowX: 'auto', paddingBottom: 8 }}>
             {inProgress.map((course) => {
               const prog = course.progress ?? getCourseProgress(course, fallbackState.completedItems || []);
@@ -203,7 +205,7 @@ export default function LearnerDashboard() {
                     <div><div style={{ fontWeight: 700, fontSize: 14 }}>{course.title}</div><div style={{ fontSize: 12, color: 'var(--color-text-muted)' }}>{course.moduleCount || course.modules?.length || 0} module</div></div>
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}><div className="progress-bar" style={{ flex: 1 }}><div className="progress-bar__fill" style={{ width: `${prog}%` }} /></div><span style={{ fontSize: 12, fontWeight: 600 }}>{prog}%</span></div>
-                  {course.dueDate && <div style={{ fontSize: 11, color: 'var(--color-warning)', marginTop: 4 }}>⏰ Hạn: {new Date(course.dueDate).toLocaleDateString('vi-VN')}</div>}
+                  {course.dueDate && <div style={{ fontSize: 11, color: 'var(--color-warning)', marginTop: 4 }}>⏰ {t('learnerPages.dashboard.due').replace('{date}', new Date(course.dueDate).toLocaleDateString(locale === 'en' ? 'en-US' : 'vi-VN'))}</div>}
                 </div>
               );
             })}
@@ -213,15 +215,15 @@ export default function LearnerDashboard() {
 
       {required.length > 0 && (
         <div style={{ marginBottom: 20 }}>
-          <h3 style={{ fontSize: 18, fontWeight: 700, marginBottom: 12 }}>🎯 Khoá học bắt buộc</h3>
+          <h3 style={{ fontSize: 18, fontWeight: 700, marginBottom: 12 }}>🎯 {t('learnerPages.dashboard.requiredCourses')}</h3>
           <div className="grid-2">
             {required.map((course) => {
               const prog = course.progress ?? getCourseProgress(course, fallbackState.completedItems || []);
               return (
                 <div key={course.id} className="card card--hoverable" onClick={() => navigate(`/learner/course/${course.id}`)}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start' }}><div style={{ fontWeight: 700, fontSize: 15, flex: 1 }}>{course.title}</div><span className="badge badge--warning">Bắt buộc</span></div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start' }}><div style={{ fontWeight: 700, fontSize: 15, flex: 1 }}>{course.title}</div><span className="badge badge--warning">{t('learnerPages.dashboard.required')}</span></div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 8 }}><div className="progress-bar" style={{ flex: 1 }}><div className="progress-bar__fill" style={{ width: `${prog}%` }} /></div><span style={{ fontSize: 12, fontWeight: 600 }}>{prog}%</span></div>
-                  <button className="btn btn--primary btn--sm btn--full" style={{ marginTop: 12 }} onClick={(e) => { e.stopPropagation(); navigate(`/learner/course/${course.id}`); }}>{prog === 0 ? '🚀 Bắt đầu học' : 'Tiếp tục'}</button>
+                  <button className="btn btn--primary btn--sm btn--full" style={{ marginTop: 12 }} onClick={(e) => { e.stopPropagation(); navigate(`/learner/course/${course.id}`); }}>{prog === 0 ? `🚀 ${t('learnerPages.dashboard.startLearning')}` : t('learnerPages.dashboard.continue')}</button>
                 </div>
               );
             })}
@@ -236,28 +238,28 @@ export default function LearnerDashboard() {
               <span style={{ fontSize: 36 }}>🔄</span>
               <div>
                 <div style={{ fontWeight: 700, fontSize: 16, display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-                  Ôn tập hàng ngày
-                  {dueCount > 0 && <span className="badge badge--danger">{dueCount} đến hạn</span>}
+                  {t('learnerPages.dashboard.dailyReview')}
+                  {dueCount > 0 && <span className="badge badge--danger">{t('learnerPages.dashboard.dueCount').replace('{count}', String(dueCount))}</span>}
                 </div>
                 <div style={{ fontSize: 13, color: 'var(--color-text-secondary)' }}>
-                  {dueCount > 0 ? `Có ${dueCount} thẻ cần ôn hôm nay` : 'Không có thẻ đến hạn. Học tiếp để tích luỹ thẻ ôn tập!'}
+                  {dueCount > 0 ? t('learnerPages.dashboard.dueCardsToday').replace('{count}', String(dueCount)) : t('learnerPages.dashboard.noDueCards')}
                 </div>
               </div>
             </div>
-            <button className="btn btn--primary" onClick={() => navigate('/learner/daily-review')}>Ôn tập</button>
+            <button className="btn btn--primary" onClick={() => navigate('/learner/daily-review')}>{t('learnerPages.dashboard.review')}</button>
           </div>
         </div>
       </div>
 
       {userNotis.length > 0 && (
         <div style={{ marginBottom: 20 }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}><h3 style={{ fontSize: 16, fontWeight: 700 }}>🔔 Thông báo</h3><button style={{ fontSize: 13, color: 'var(--color-primary)', fontWeight: 600 }} onClick={() => navigate('/learner/notifications')}>Xem tất cả</button></div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}><h3 style={{ fontSize: 16, fontWeight: 700 }}>🔔 {t('learnerPages.dashboard.notifications')}</h3><button style={{ fontSize: 13, color: 'var(--color-primary)', fontWeight: 600 }} onClick={() => navigate('/learner/notifications')}>{t('learnerPages.dashboard.viewAll')}</button></div>
           {userNotis.slice(0, 3).map((n) => <div key={n.id} className="card" style={{ marginBottom: 8, padding: 12 }}><div style={{ fontWeight: 600, fontSize: 14 }}>{n.title}</div><div style={{ fontSize: 13, color: 'var(--color-text-secondary)' }}>{n.body}</div></div>)}
         </div>
       )}
 
-      <button aria-label="Học nhanh 5 phút" onClick={handleQuickStart} className="fab-quick">⚡</button>
-      {!isOnline && <div style={{ fontSize: 12, color: 'var(--color-text-muted)', marginTop: 8 }}>Chế độ offline: đang dùng dữ liệu cục bộ.</div>}
+      <button aria-label={t('learnerPages.dashboard.quick5')} onClick={handleQuickStart} className="fab-quick">⚡</button>
+      {!isOnline && <div style={{ fontSize: 12, color: 'var(--color-text-muted)', marginTop: 8 }}>{t('learnerPages.dashboard.offlineMode')}</div>}
     </LearnerLayout>
   );
 }

@@ -1,4 +1,5 @@
 ﻿import { COURSE_STATUS } from '../../data/mockCourses.js';
+import { useI18n } from '../../i18n/index.jsx';
 
 export default function CourseManagementSection({
   courses,
@@ -6,14 +7,18 @@ export default function CourseManagementSection({
   onOpenBuilder,
   onOpenCreateCourse,
   renderActions,
-  title = 'Danh sách khoá học',
-  createButtonLabel = '+ Thêm khoá học',
+  title,
+  createButtonLabel,
 }) {
+  const { t } = useI18n();
+  const resolvedTitle = title || t('ui.courseManagement.title');
+  const resolvedCreateLabel = createButtonLabel || t('ui.courseManagement.addCourse');
+
   return (
     <div>
       <div className="admin-toolbar">
-        <h3 className="admin-toolbar__title">{title} ({courses.length})</h3>
-        <button className="btn btn--primary" onClick={onOpenCreateCourse}>{createButtonLabel}</button>
+        <h3 className="admin-toolbar__title">{resolvedTitle} ({courses.length})</h3>
+        <button className="btn btn--primary" onClick={onOpenCreateCourse}>{resolvedCreateLabel}</button>
       </div>
 
       <div className="grid-2">
@@ -25,12 +30,14 @@ export default function CourseManagementSection({
           >
             <div className="course-card__header">
               <div className="course-card__title">{course.title}</div>
-              <span className={`badge ${course.status === COURSE_STATUS.PUBLISHED ? 'badge--success' : 'badge--warning'}`}>{course.status}</span>
+              <span className={`badge ${course.status === COURSE_STATUS.PUBLISHED ? 'badge--success' : 'badge--warning'}`}>
+                {course.status === COURSE_STATUS.PUBLISHED ? t('ui.courseStatus.published') : t('ui.courseStatus.draft')}
+              </span>
             </div>
             <div className="course-card__tags">{(course.tags || []).map((tag) => <span key={tag} className="chip">{tag}</span>)}</div>
-            <div className="course-card__meta"><span>{course.moduleCount} module</span><span>{course.duration}p</span></div>
+            <div className="course-card__meta"><span>{t('ui.courseManagement.modulesCount').replace('{count}', String(course.moduleCount))}</span><span>{t('ui.courseManagement.durationMinutesShort').replace('{minutes}', String(course.duration))}</span></div>
             <div style={{ marginTop: 10, display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-              <button className="btn btn--ghost btn--sm" onClick={(event) => { event.stopPropagation(); onOpenBuilder(course.id); }}>Builder</button>
+              <button className="btn btn--ghost btn--sm" onClick={(event) => { event.stopPropagation(); onOpenBuilder(course.id); }}>{t('ui.courseManagement.builder')}</button>
               {renderActions && <span onClick={(event) => event.stopPropagation()}>{renderActions(course)}</span>}
             </div>
           </div>

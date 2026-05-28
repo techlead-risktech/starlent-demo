@@ -1,16 +1,26 @@
-import { useEffect, useState } from 'react';
+﻿import { useEffect, useState } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { getContentById } from '../../data/mockContent.js';
 import { completeItem } from '../../utils/auth.js';
 import { completeLearningItem } from '../../api/services/learning.js';
 import { useToast } from '../../hooks/useToast.js';
 import LearnerLayout from '../../components/layout/LearnerLayout.jsx';
+import { useI18n } from '../../i18n/index.jsx';
+
+const ICON_OK = '✅';
+const ICON_BACK = '←';
+const ICON_BOOK = '📖';
+
+function formatText(template, values) {
+  return Object.entries(values).reduce((acc, [key, value]) => acc.replaceAll(`{${key}}`, String(value)), template);
+}
 
 export default function ReadingLesson() {
   const { contentId } = useParams();
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const { toast, showToast } = useToast();
+  const { t } = useI18n();
 
   const itemId = searchParams.get('itemId');
   const moduleId = searchParams.get('moduleId');
@@ -34,23 +44,26 @@ export default function ReadingLesson() {
       completeItem(resolvedItemId, earnedXp);
     }
     setDone(true);
-    showToast(`✅ Hoàn thành! +${earnedXp} điểm`);
+    showToast(`${ICON_OK} ${formatText(t('learnerPages.reading.completedToast'), { xp: earnedXp })}`);
   };
 
   if (!content) {
-    return <LearnerLayout topBar={<div className="page__header"><div className="page__title">Đang tải...</div></div>}><div className="empty-state">Đang tải...</div></LearnerLayout>;
+    return <LearnerLayout topBar={<div className="page__header"><div className="page__title">{t('common.loading')}</div></div>}><div className="empty-state">{t('common.loading')}</div></LearnerLayout>;
   }
 
   return (
-    <LearnerLayout topBar={<div className="page__header"><button className="btn btn--ghost btn--sm" onClick={handleBack} style={{ marginBottom: 8 }}>← Quay lại</button><div className="page__title">{content.title}</div></div>}>
+    <LearnerLayout topBar={<div className="page__header"><button className="btn btn--ghost btn--sm" onClick={handleBack} style={{ marginBottom: 8 }}>{ICON_BACK} {t('learnerPages.common.back')}</button><div className="page__title">{content.title}</div></div>}>
       <div style={{ padding: 16 }}>
         <div className="card" style={{ marginBottom: 12 }}>
-          <h4 style={{ marginBottom: 8, fontSize: 16, fontWeight: 700 }}>📖 Nội dung đọc</h4>
+          <h4 style={{ marginBottom: 8, fontSize: 16, fontWeight: 700 }}>{ICON_BOOK} {t('learnerPages.reading.contentTitle')}</h4>
           <pre style={{ whiteSpace: 'pre-wrap', lineHeight: 1.6, margin: 0 }}>{content.body || ''}</pre>
         </div>
-        {!done ? <button className="btn btn--success btn--lg btn--full" onClick={markDone}>✅ Đánh dấu hoàn thành</button> : <button className="btn btn--primary btn--lg btn--full" onClick={handleBack}>Quay lại khóa học</button>}
+        {!done ? <button className="btn btn--success btn--lg btn--full" onClick={markDone}>{ICON_OK} {t('learnerPages.reading.markDone')}</button> : <button className="btn btn--primary btn--lg btn--full" onClick={handleBack}>{t('learnerPages.reading.backToCourse')}</button>}
       </div>
       {toast && <div className="toast">{toast}</div>}
     </LearnerLayout>
   );
 }
+
+
+

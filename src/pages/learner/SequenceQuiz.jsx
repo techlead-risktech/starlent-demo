@@ -7,6 +7,7 @@ import { useToast, usePreventLeave } from '../../hooks/useToast.js';
 import { useLessonDirty } from '../../hooks/useLessonGuard.jsx';
 import LearnerLayout from '../../components/layout/LearnerLayout.jsx';
 import LeaveConfirmModal from '../../components/common/LeaveConfirmModal.jsx';
+import { useI18n } from '../../i18n/index.jsx';
 
 function normalizeVietnameseText(value) {
   const text = String(value || '');
@@ -33,6 +34,7 @@ export default function SequenceQuiz() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const { toast, showToast } = useToast();
+  const { t } = useI18n();
 
   const itemId = searchParams.get('itemId');
   const moduleId = searchParams.get('moduleId');
@@ -69,7 +71,7 @@ export default function SequenceQuiz() {
     setAttempts((v) => v + 1);
     const solved = items.every((it, i) => it.order === i + 1);
     if (!solved) {
-      showToast('❌ Chưa đúng, thử lại!');
+      showToast(`❌ ${t('learnerPages.sequence.wrongToast')}`);
       return;
     }
 
@@ -85,14 +87,14 @@ export default function SequenceQuiz() {
       completeItem(resolvedItemId, 15);
     }
     setDone(true);
-    showToast('✅ Chính xác! +15 điểm');
+    showToast(`✅ ${t('learnerPages.sequence.correctToast').replace('{xp}', '15')}`);
   };
 
-  if (!content) return <LearnerLayout topBar={<div className="page__header"><div className="page__title">Đang tải...</div></div>}><div className="empty-state">Đang tải...</div></LearnerLayout>;
-  if (done) return <LearnerLayout topBar={<div className="page__header"><div className="page__title">{normalizeVietnameseText(content.title)}</div></div>}><div style={{ textAlign: 'center', padding: 40 }}><div style={{ fontSize: 64 }}>🎉</div><h2 style={{ fontSize: 24, fontWeight: 800, margin: '8px 0' }}>Hoàn thành!</h2><p style={{ fontSize: 16, color: 'var(--color-text-secondary)' }}>Số lần thử: {attempts}</p><button className="btn btn--primary btn--lg btn--full" style={{ marginTop: 24 }} onClick={handleBack}>Quay lại</button></div></LearnerLayout>;
+  if (!content) return <LearnerLayout topBar={<div className="page__header"><div className="page__title">{t('learnerPages.sequence.loading')}</div></div>}><div className="empty-state">{t('learnerPages.sequence.loading')}</div></LearnerLayout>;
+  if (done) return <LearnerLayout topBar={<div className="page__header"><div className="page__title">{normalizeVietnameseText(content.title)}</div></div>}><div style={{ textAlign: 'center', padding: 40 }}><div style={{ fontSize: 64 }}>🎉</div><h2 style={{ fontSize: 24, fontWeight: 800, margin: '8px 0' }}>{t('learnerPages.sequence.doneTitle')}</h2><p style={{ fontSize: 16, color: 'var(--color-text-secondary)' }}>{t('learnerPages.sequence.attempts').replace('{count}', String(attempts))}</p><button className="btn btn--primary btn--lg btn--full" style={{ marginTop: 24 }} onClick={handleBack}>{t('learnerPages.common.back')}</button></div></LearnerLayout>;
 
   return (
-    <LearnerLayout topBar={<div className="page__header" style={{ display: 'flex', alignItems: 'center', gap: 12 }}><button className="btn btn--ghost btn--sm" onClick={handleBack} style={{ flexShrink: 0 }}>← Quay lại</button><div style={{ flex: 1 }}><div className="page__title">{normalizeVietnameseText(content.title)}</div><div style={{ fontSize: 13, color: 'var(--color-text-muted)' }}>Lần thử: {attempts}</div></div></div>}>
+    <LearnerLayout topBar={<div className="page__header" style={{ display: 'flex', alignItems: 'center', gap: 12 }}><button className="btn btn--ghost btn--sm" onClick={handleBack} style={{ flexShrink: 0 }}>← {t('learnerPages.common.back')}</button><div style={{ flex: 1 }}><div className="page__title">{normalizeVietnameseText(content.title)}</div><div style={{ fontSize: 13, color: 'var(--color-text-muted)' }}>{t('learnerPages.sequence.attemptInline').replace('{count}', String(attempts))}</div></div></div>}>
       <div style={{ padding: 16 }}>
         <p style={{ fontSize: 14, color: 'var(--color-text-secondary)', marginBottom: 16 }}>{normalizeVietnameseText(content.description)}</p>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 20 }}>
@@ -107,8 +109,8 @@ export default function SequenceQuiz() {
             </div>
           ))}
         </div>
-        <button className="btn btn--primary btn--lg btn--full" onClick={check}>Kiểm tra</button>
-        <button className="btn btn--ghost btn--full" style={{ marginTop: 8 }} onClick={() => setItems(shuffle(content.items || []))}>Xáo trộn lại</button>
+        <button className="btn btn--primary btn--lg btn--full" onClick={check}>{t('learnerPages.sequence.check')}</button>
+        <button className="btn btn--ghost btn--full" style={{ marginTop: 8 }} onClick={() => setItems(shuffle(content.items || []))}>{t('learnerPages.sequence.shuffle')}</button>
       </div>
       {toast && <div className="toast">{toast}</div>}
       <LeaveConfirmModal open={showLeaveModal} onStay={handleStay} onLeave={handleLeave} />

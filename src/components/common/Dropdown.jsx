@@ -1,6 +1,8 @@
-import { useState, useEffect, useRef } from 'react';
+﻿import { useState, useEffect, useRef } from 'react';
+import { useI18n } from '../../i18n/index.jsx';
 
 export default function Dropdown({ value, options, onChange, placeholder }) {
+  const { t } = useI18n();
   const [open, setOpen] = useState(false);
   const containerRef = useRef(null);
 
@@ -13,8 +15,8 @@ export default function Dropdown({ value, options, onChange, placeholder }) {
     return () => document.removeEventListener('mousedown', handle);
   }, [open]);
 
-  const selected = options.find(o => o.value === value);
-  const display = selected ? selected.label : (placeholder || 'Chọn...');
+  const selected = options.find((o) => o.value === value);
+  const display = selected ? selected.label : (placeholder || t('common.select'));
 
   return (
     <div className="dropdown" ref={containerRef}>
@@ -24,7 +26,7 @@ export default function Dropdown({ value, options, onChange, placeholder }) {
       </button>
       {open && (
         <div className="dropdown__menu">
-          {options.map(o => (
+          {options.map((o) => (
             <button
               key={o.value}
               type="button"

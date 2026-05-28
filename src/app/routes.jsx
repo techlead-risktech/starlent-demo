@@ -1,7 +1,8 @@
-import { Routes, Route, Navigate } from 'react-router-dom';
+﻿import { Routes, Route, Navigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth.jsx';
 import { ROLE_ROUTES } from '../data/mockUsers.js';
 import ProtectedRoute from '../components/common/ProtectedRoute.jsx';
+import { useI18n } from '../i18n/index.jsx';
 
 // Auth
 import LoginPage from '../pages/auth/LoginPage.jsx';
@@ -56,13 +57,14 @@ function RedirectByRole() {
 
 export default function AppRoutes() {
   const { user, loading } = useAuth();
+  const { t } = useI18n();
 
   if (loading) {
     return (
       <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--color-bg)' }}>
         <div style={{ textAlign: 'center' }}>
-          <div style={{ fontSize: 48, marginBottom: 16 }}>📚</div>
-          <div style={{ fontSize: 18, fontWeight: 600, color: 'var(--color-text-secondary)' }}>Đang tải...</div>
+          <div style={{ fontSize: 48, marginBottom: 16 }}>{'\u{1F4DA}'}</div>
+          <div style={{ fontSize: 18, fontWeight: 600, color: 'var(--color-text-secondary)' }}>{t('common.loading')}</div>
         </div>
       </div>
     );
@@ -73,7 +75,6 @@ export default function AppRoutes() {
       <Route path="/login" element={user ? <RedirectByRole /> : <LoginPage />} />
       <Route path="/onboarding" element={<OnboardingPage />} />
 
-      {/* Learner routes */}
       <Route path="/learner/dashboard" element={<ProtectedRoute roles={['learner']}><LearnerDashboard /></ProtectedRoute>} />
       <Route path="/learner/courses" element={<ProtectedRoute roles={['learner']}><LearningPath /></ProtectedRoute>} />
       <Route path="/learner/explore" element={<ProtectedRoute roles={['learner']}><ExploreLibrary /></ProtectedRoute>} />
@@ -99,18 +100,14 @@ export default function AppRoutes() {
       <Route path="/learner/settings" element={<ProtectedRoute roles={['learner']}><SettingsPage /></ProtectedRoute>} />
       <Route path="/learner/notifications" element={<ProtectedRoute roles={['learner']}><NotificationsPage /></ProtectedRoute>} />
 
-      {/* Trainer */}
       <Route path="/trainer/dashboard" element={<ProtectedRoute roles={['trainer']}><TrainerDashboard /></ProtectedRoute>} />
 
-      {/* Editor */}
       <Route path="/editor/dashboard" element={<ProtectedRoute roles={['editor']}><EditorDashboard /></ProtectedRoute>} />
       <Route path="/editor/courses/:courseId/builder" element={<ProtectedRoute roles={['editor']}><EditorCourseBuilderPage /></ProtectedRoute>} />
 
-      {/* Manager */}
       <Route path="/manager/dashboard" element={<ProtectedRoute roles={['learning_manager']}><ManagerDashboard /></ProtectedRoute>} />
-      <Route path="/manager/department" element={<ProtectedRoute roles={['dept_manager','learning_manager']}><DepartmentView /></ProtectedRoute>} />
+      <Route path="/manager/department" element={<ProtectedRoute roles={['dept_manager', 'learning_manager']}><DepartmentView /></ProtectedRoute>} />
 
-      {/* Admin */}
       <Route path="/admin/dashboard" element={<ProtectedRoute roles={['admin']}><AdminDashboard /></ProtectedRoute>} />
       <Route path="/admin/courses/:courseId/builder" element={<ProtectedRoute roles={['admin']}><AdminCourseBuilderPage /></ProtectedRoute>} />
 
@@ -118,3 +115,6 @@ export default function AppRoutes() {
     </Routes>
   );
 }
+
+
+

@@ -23,45 +23,61 @@ import { createCourseByScope } from '../../api/services/courseManagement.js';
 import { getAdminReportingDashboard } from '../../api/services/reporting.js';
 import { createTenant, updateTenant } from '../../api/services/tenantManagement.js';
 import { assignCourseByAdmin } from '../../api/services/distributionManagement.js';
+import { useI18n } from '../../i18n/index.jsx';
 
 const STATE_SYNC_EVENT = 'starlent:state-sync';
 const STATE_SYNC_KEY = 'starlent_state_sync_v1';
 
 const ROLES = [
-  { value: 'learner', label: 'Học viên' },
-  { value: 'trainer', label: 'Giảng viên' },
-  { value: 'editor', label: 'Biên tập viên' },
-  { value: 'learning_manager', label: 'Quản lý đào tạo' },
-  { value: 'dept_manager', label: 'Quản lý phòng ban' },
-  { value: 'admin', label: 'Quản trị viên' },
+  { value: 'learner', labelKey: 'learnerPages.adminPages.roleLearner' },
+  { value: 'trainer', labelKey: 'learnerPages.adminPages.roleTrainer' },
+  { value: 'editor', labelKey: 'learnerPages.adminPages.roleEditor' },
+  { value: 'learning_manager', labelKey: 'learnerPages.adminPages.roleLearningManager' },
+  { value: 'dept_manager', labelKey: 'learnerPages.adminPages.roleDeptManager' },
+  { value: 'admin', labelKey: 'learnerPages.adminPages.roleAdmin' },
 ];
 
-const DEPARTMENTS = ['Công nghệ thông tin', 'Nhân sự', 'Kinh doanh', 'Marketing', 'Tài chính', 'Vận hành'];
+const DEPARTMENT_KEYS = [
+  'learnerPages.adminPages.deptIt',
+  'learnerPages.adminPages.deptHr',
+  'learnerPages.adminPages.deptSales',
+  'learnerPages.adminPages.deptMarketing',
+  'learnerPages.adminPages.deptFinance',
+  'learnerPages.adminPages.deptOps',
+];
+
+function f(template, values) {
+  return Object.entries(values).reduce((acc, [key, value]) => acc.replaceAll(`{${key}}`, String(value)), template);
+}
 
 // eslint-disable-next-line react/prop-types
 function AddUserForm({ onClose, onSubmit }) {
+  const { t } = useI18n();
+  const roles = ROLES.map((role) => ({ value: role.value, label: t(role.labelKey) }));
+  const departments = DEPARTMENT_KEYS.map((key) => ({ value: t(key), label: t(key) }));
   const [form, setForm] = useState({ name: '', email: '', role: 'learner', department: '', password: '' });
   const change = (field) => (event) => setForm((prev) => ({ ...prev, [field]: event.target.value }));
 
   return (
     <form onSubmit={(event) => { event.preventDefault(); onSubmit(form); }} className="admin-form">
-      <h3 className="admin-form__title">➕ Thêm người dùng mới</h3>
+      <h3 className="admin-form__title">➕ {t('learnerPages.adminPages.addUserTitle')}</h3>
       <div className="admin-form__grid">
-        <div className="input-group"><label className="input-label">Họ và tên *</label><input className="input" value={form.name} onChange={change('name')} required /></div>
+        <div className="input-group"><label className="input-label">{t('learnerPages.adminPages.fullName')} *</label><input className="input" value={form.name} onChange={change('name')} required /></div>
         <div className="input-group"><label className="input-label">Email *</label><input className="input" type="email" value={form.email} onChange={change('email')} required /></div>
-        <div className="input-group"><label className="input-label">Vai trò</label><Dropdown value={form.role} options={ROLES} onChange={(value) => setForm((prev) => ({ ...prev, role: value }))} /></div>
-        <div className="input-group"><label className="input-label">Phòng ban</label><Dropdown value={form.department} options={DEPARTMENTS.map((department) => ({ value: department, label: department }))} onChange={(value) => setForm((prev) => ({ ...prev, department: value }))} placeholder="-- Chọn phòng ban --" /></div>
-        <div className="input-group admin-form__full"><label className="input-label">Mật khẩu *</label><input className="input" type="password" value={form.password} onChange={change('password')} minLength={6} required /></div>
+        <div className="input-group"><label className="input-label">{t('learnerPages.adminPages.roleLabel')}</label><Dropdown value={form.role} options={roles} onChange={(value) => setForm((prev) => ({ ...prev, role: value }))} /></div>
+        <div className="input-group"><label className="input-label">{t('learnerPages.adminPages.department')}</label><Dropdown value={form.department} options={departments} onChange={(value) => setForm((prev) => ({ ...prev, department: value }))} placeholder={t('learnerPages.adminPages.selectDepartment')} /></div>
+        <div className="input-group admin-form__full"><label className="input-label">{t('learnerPages.adminPages.password')} *</label><input className="input" type="password" value={form.password} onChange={change('password')} minLength={6} required /></div>
       </div>
       <div className="admin-form__actions">
-        <button type="button" className="btn btn--secondary" onClick={onClose}>Huỷ</button>
-        <button type="submit" className="btn btn--primary">✅ Tạo tài khoản</button>
+        <button type="button" className="btn btn--secondary" onClick={onClose}>{t('learnerPages.adminPages.cancel')}</button>
+        <button type="submit" className="btn btn--primary">✅ {t('learnerPages.adminPages.createAccount')}</button>
       </div>
     </form>
   );
 }
 
 function TenantForm({ initialValue, onClose, onSubmit }) {
+  const { t } = useI18n();
   const [form, setForm] = useState(initialValue || {
     name: '',
     domain: '',
@@ -86,32 +102,32 @@ function TenantForm({ initialValue, onClose, onSubmit }) {
 
   return (
     <form onSubmit={(event) => { event.preventDefault(); onSubmit(form); }} className="admin-form">
-      <h3 className="admin-form__title">{initialValue?.id ? '✏️ Cập nhật tenant' : '➕ Tạo tenant mới'}</h3>
+      <h3 className="admin-form__title">{initialValue?.id ? `✏️ ${t('learnerPages.adminPages.tenantUpdate')}` : `➕ ${t('learnerPages.adminPages.tenantCreate')}`}</h3>
       <div className="admin-form__grid">
-        <div className="input-group"><label className="input-label">Tên tenant *</label><input className="input" value={form.name} onChange={change('name')} required /></div>
-        <div className="input-group"><label className="input-label">Domain *</label><input className="input" value={form.domain} onChange={change('domain')} placeholder="academy.example.com" required /></div>
-        <div className="input-group admin-form__full"><label className="input-label">Logo URL (mock upload)</label><input className="input" value={form.logoUrl} onChange={change('logoUrl')} placeholder="https://..." /></div>
-        <div className="input-group"><label className="input-label">Trạng thái</label><Dropdown value={form.status} options={[{ value: 'active', label: 'Active' }, { value: 'draft', label: 'Draft' }, { value: 'archived', label: 'Archived' }]} onChange={(value) => setForm((prev) => ({ ...prev, status: value }))} /></div>
+        <div className="input-group"><label className="input-label">{t('learnerPages.adminPages.tenantName')} *</label><input className="input" value={form.name} onChange={change('name')} required /></div>
+        <div className="input-group"><label className="input-label">{t('learnerPages.adminPages.domain')} *</label><input className="input" value={form.domain} onChange={change('domain')} placeholder="academy.example.com" required /></div>
+        <div className="input-group admin-form__full"><label className="input-label">{t('learnerPages.adminPages.logoUrl')}</label><input className="input" value={form.logoUrl} onChange={change('logoUrl')} placeholder="https://..." /></div>
+        <div className="input-group"><label className="input-label">{t('learnerPages.adminPages.status')}</label><Dropdown value={form.status} options={[{ value: 'active', label: t('learnerPages.adminPages.statusActive') }, { value: 'draft', label: t('learnerPages.adminPages.statusDraft') }, { value: 'archived', label: t('learnerPages.adminPages.statusArchived') }]} onChange={(value) => setForm((prev) => ({ ...prev, status: value }))} /></div>
       </div>
 
-      <h4 style={{ marginTop: 10, marginBottom: 8 }}>Theme</h4>
+      <h4 style={{ marginTop: 10, marginBottom: 8 }}>{t('learnerPages.adminPages.configTheme')}</h4>
       <div className="admin-form__grid">
-        <div className="input-group"><label className="input-label">Primary</label><input className="input" type="color" value={form.theme.primaryColor} onChange={changeTheme('primaryColor')} /></div>
-        <div className="input-group"><label className="input-label">Secondary</label><input className="input" type="color" value={form.theme.secondaryColor} onChange={changeTheme('secondaryColor')} /></div>
-        <div className="input-group"><label className="input-label">Background</label><input className="input" type="color" value={form.theme.backgroundColor} onChange={changeTheme('backgroundColor')} /></div>
-        <div className="input-group"><label className="input-label">Text</label><input className="input" type="color" value={form.theme.textColor} onChange={changeTheme('textColor')} /></div>
+        <div className="input-group"><label className="input-label">{t('learnerPages.adminPages.themePrimary')}</label><input className="input" type="color" value={form.theme.primaryColor} onChange={changeTheme('primaryColor')} /></div>
+        <div className="input-group"><label className="input-label">{t('learnerPages.adminPages.themeSecondary')}</label><input className="input" type="color" value={form.theme.secondaryColor} onChange={changeTheme('secondaryColor')} /></div>
+        <div className="input-group"><label className="input-label">{t('learnerPages.adminPages.themeBackground')}</label><input className="input" type="color" value={form.theme.backgroundColor} onChange={changeTheme('backgroundColor')} /></div>
+        <div className="input-group"><label className="input-label">{t('learnerPages.adminPages.themeText')}</label><input className="input" type="color" value={form.theme.textColor} onChange={changeTheme('textColor')} /></div>
       </div>
 
-      <h4 style={{ marginTop: 10, marginBottom: 8 }}>Typography</h4>
+      <h4 style={{ marginTop: 10, marginBottom: 8 }}>{t('learnerPages.adminPages.configTypography')}</h4>
       <div className="admin-form__grid">
-        <div className="input-group"><label className="input-label">Font family</label><input className="input" value={form.typography.fontFamily} onChange={changeTypography('fontFamily')} /></div>
-        <div className="input-group"><label className="input-label">Heading style</label><input className="input" value={form.typography.headingStyle} onChange={changeTypography('headingStyle')} /></div>
-        <div className="input-group"><label className="input-label">Body style</label><input className="input" value={form.typography.bodyStyle} onChange={changeTypography('bodyStyle')} /></div>
+        <div className="input-group"><label className="input-label">{t('learnerPages.adminPages.typographyFontFamily')}</label><input className="input" value={form.typography.fontFamily} onChange={changeTypography('fontFamily')} /></div>
+        <div className="input-group"><label className="input-label">{t('learnerPages.adminPages.typographyHeading')}</label><input className="input" value={form.typography.headingStyle} onChange={changeTypography('headingStyle')} /></div>
+        <div className="input-group"><label className="input-label">{t('learnerPages.adminPages.typographyBody')}</label><input className="input" value={form.typography.bodyStyle} onChange={changeTypography('bodyStyle')} /></div>
       </div>
 
       <div className="admin-form__actions">
-        <button type="button" className="btn btn--secondary" onClick={onClose}>Huỷ</button>
-        <button type="submit" className="btn btn--primary">✅ Lưu tenant</button>
+        <button type="button" className="btn btn--secondary" onClick={onClose}>{t('learnerPages.adminPages.cancel')}</button>
+        <button type="submit" className="btn btn--primary">✅ {t('learnerPages.adminPages.saveTenant')}</button>
       </div>
     </form>
   );
@@ -143,6 +159,7 @@ TenantForm.propTypes = {
 export default function AdminDashboard() {
   const { user } = useAuth();
   const { toast, showToast } = useToast();
+  const { t, locale } = useI18n();
   const navigate = useNavigate();
   const [params, setParams] = useSearchParams();
   const tab = params.get('tab') || 'overview';
@@ -179,6 +196,18 @@ export default function AdminDashboard() {
     next.set('tab', nextTab);
     setParams(next);
   };
+
+  const adminTabs = [
+    { key: 'overview', label: `📊 ${t('learnerPages.adminPages.tabsOverview')}` },
+    { key: 'users', label: `👥 ${t('learnerPages.adminPages.tabsUsers')}` },
+    { key: 'courses', label: `📚 ${t('learnerPages.adminPages.tabsCourses')}` },
+    { key: 'distribution', label: `📤 ${t('learnerPages.adminPages.tabsDistribution')}` },
+    { key: 'tenants', label: `🏢 ${t('learnerPages.adminPages.tabsTenants')}` },
+    { key: 'reports', label: `📈 ${t('learnerPages.adminPages.tabsReports')}` },
+    { key: 'certificates', label: `🎓 ${t('learnerPages.adminPages.tabsCertificates')}` },
+    { key: 'audit', label: `📋 ${t('learnerPages.adminPages.tabsAudit')}` },
+    { key: 'settings', label: `⚙️ ${t('learnerPages.adminPages.tabsSettings')}` },
+  ];
 
   const openBuilderForCourse = (courseId) => {
     if (!courseId) return;
@@ -244,9 +273,9 @@ export default function AdminDashboard() {
     try {
       const response = await createUser(form);
       setData((prev) => ({ ...prev, users: [...prev.users, response.user] }));
-      showToast('✅ Đã tạo tài khoản');
+      showToast(`✅ ${t('learnerPages.adminPages.toastCreateUserOk')}`);
     } catch (error) {
-      showToast(error?.message || '❌ Không thể tạo tài khoản');
+      showToast(error?.message || `❌ ${t('learnerPages.adminPages.toastCreateUserFail')}`);
     } finally {
       setShowUserModal(false);
     }
@@ -257,10 +286,10 @@ export default function AdminDashboard() {
     try {
       const response = await createCourseByScope('admin', payload);
       setData((prev) => ({ ...prev, courses: [...prev.courses, response.course] }));
-      showToast('✅ Đã tạo khoá học');
+      showToast(`✅ ${t('learnerPages.adminPages.toastCreateCourseOk')}`);
       if (continueToBuilder) openBuilderForCourse(response.course.id);
     } catch (error) {
-      showToast(error?.message || '❌ Không thể tạo khoá học');
+      showToast(error?.message || `❌ ${t('learnerPages.adminPages.toastCreateCourseFail')}`);
     } finally {
       setShowCourseModal(false);
     }
@@ -274,16 +303,16 @@ export default function AdminDashboard() {
           ...prev,
           tenants: prev.tenants.map((tenant) => (tenant.id === editingTenant.id ? response.tenant : tenant)),
         }));
-        showToast('✅ Đã cập nhật tenant');
+        showToast(`✅ ${t('learnerPages.adminPages.toastUpdateTenantOk')}`);
       } else {
         const response = await createTenant(form);
         setData((prev) => ({ ...prev, tenants: [...prev.tenants, response.tenant] }));
-        showToast('✅ Đã tạo tenant');
+        showToast(`✅ ${t('learnerPages.adminPages.toastCreateTenantOk')}`);
       }
       setShowTenantModal(false);
       setEditingTenant(null);
     } catch (error) {
-      showToast(error?.message || '❌ Không thể lưu tenant');
+      showToast(error?.message || `❌ ${t('learnerPages.adminPages.toastSaveTenantFail')}`);
     }
   };
 
@@ -301,39 +330,39 @@ export default function AdminDashboard() {
   }, [assignmentForm.courseId, assignmentForm.department, assignmentForm.userId, data.courses, data.users]);
 
   const handleAssignCourse = async () => {
-    if (!assignmentForm.courseId) return showToast('⚠️ Vui lòng chọn khoá học');
-    if (assignmentForm.scope === 'user' && !assignmentForm.userId) return showToast('⚠️ Vui lòng chọn học viên');
-    if (assignmentForm.scope === 'department' && !assignmentForm.department) return showToast('⚠️ Vui lòng chọn phòng ban');
+    if (!assignmentForm.courseId) return showToast(`⚠️ ${t('learnerPages.adminPages.toastSelectCourse')}`);
+    if (assignmentForm.scope === 'user' && !assignmentForm.userId) return showToast(`⚠️ ${t('learnerPages.adminPages.toastSelectLearner')}`);
+    if (assignmentForm.scope === 'department' && !assignmentForm.department) return showToast(`⚠️ ${t('learnerPages.adminPages.toastSelectDept')}`);
     try {
       const response = await assignCourseByAdmin(assignmentForm);
       const created = Array.isArray(response.assignments) ? response.assignments : [];
       setData((prev) => ({ ...prev, assignments: [...created, ...(prev.assignments || [])] }));
-      showToast(`✅ Đã phân phối ${created.length} lượt gán`);
+      showToast(`✅ ${f(t('learnerPages.adminPages.toastAssignOk'), { count: created.length })}`);
     } catch (error) {
-      showToast(error?.message || '❌ Không thể phân phối khoá học');
+      showToast(error?.message || `❌ ${t('learnerPages.adminPages.toastAssignFail')}`);
     }
   };
 
-  if (loading) return <AdminLayout title="Quản trị hệ thống"><div className="skeleton skeleton-card" /></AdminLayout>;
+  if (loading) return <AdminLayout title={t('learnerPages.adminPages.dashboardTitle')}><div className="skeleton skeleton-card" /></AdminLayout>;
 
   return (
-    <AdminLayout title="Quản trị hệ thống">
-      <div className="admin-header"><div><h2 className="admin-header__greeting">Xin chào, {user?.name}</h2><p className="admin-header__role">Vai trò: Quản trị hệ thống</p></div></div>
+    <AdminLayout title={t('learnerPages.adminPages.dashboardTitle')}>
+      <div className="admin-header"><div><h2 className="admin-header__greeting">{f(t('learnerPages.adminPages.hello'), { name: user?.name || '' })}</h2><p className="admin-header__role">{t('learnerPages.adminPages.role')}</p></div></div>
       <div className="tabs">
-        {[{ key: 'overview', label: '📊 Tổng quan' }, { key: 'users', label: '👥 Người dùng' }, { key: 'courses', label: '📚 Khoá học' }, { key: 'distribution', label: '📤 Phân phối' }, { key: 'tenants', label: '🏢 Tenant' }, { key: 'reports', label: '📈 Báo cáo' }, { key: 'certificates', label: '🎓 Chứng chỉ' }, { key: 'audit', label: '📋 Nhật ký' }, { key: 'settings', label: '⚙️ Cài đặt' }].map((item) => <button key={item.key} className={`tab${tab === item.key ? ' tab--active' : ''}`} onClick={() => changeTab(item.key)}>{item.label}</button>)}
+        {adminTabs.map((item) => <button key={item.key} className={`tab${tab === item.key ? ' tab--active' : ''}`} onClick={() => changeTab(item.key)}>{item.label}</button>)}
       </div>
 
       {tab === 'overview' && (
         <div>
           <div className="grid-4" style={{ marginBottom: 16 }}>
-            <div className="stat-card"><div className="stat-card__icon">👥</div><div className="stat-card__label">Người dùng</div><div className="stat-card__value">{data.users.length}</div></div>
-            <div className="stat-card"><div className="stat-card__icon">📚</div><div className="stat-card__label">Khoá học</div><div className="stat-card__value">{data.courses.length}</div></div>
-            <div className="stat-card"><div className="stat-card__icon">🎓</div><div className="stat-card__label">Học viên</div><div className="stat-card__value">{data.reportSummary.activeLearners}</div></div>
-            <div className="stat-card"><div className="stat-card__icon">🏅</div><div className="stat-card__label">Chứng chỉ</div><div className="stat-card__value">{data.reportSummary.totalCertificates}</div></div>
+            <div className="stat-card"><div className="stat-card__icon">👥</div><div className="stat-card__label">{t('learnerPages.adminPages.overviewUsers')}</div><div className="stat-card__value">{data.users.length}</div></div>
+            <div className="stat-card"><div className="stat-card__icon">📚</div><div className="stat-card__label">{t('learnerPages.adminPages.overviewCourses')}</div><div className="stat-card__value">{data.courses.length}</div></div>
+            <div className="stat-card"><div className="stat-card__icon">🎓</div><div className="stat-card__label">{t('learnerPages.adminPages.overviewLearners')}</div><div className="stat-card__value">{data.reportSummary.activeLearners}</div></div>
+            <div className="stat-card"><div className="stat-card__icon">🏅</div><div className="stat-card__label">{t('learnerPages.adminPages.overviewCertificates')}</div><div className="stat-card__value">{data.reportSummary.totalCertificates}</div></div>
           </div>
 
           <div className="card">
-            <h3 className="card__title" style={{ marginBottom: 10 }}>Khoá học gần đây</h3>
+            <h3 className="card__title" style={{ marginBottom: 10 }}>{t('learnerPages.adminPages.recentCourses')}</h3>
             {data.courses.slice(0, 5).map((course) => (
               <div
                 key={course.id}
@@ -351,8 +380,8 @@ export default function AdminDashboard() {
       )}
 
       {tab === 'users' && <div>
-        <div className="admin-toolbar"><h3 className="admin-toolbar__title">Danh sách người dùng ({data.users.length})</h3><button className="btn btn--primary" onClick={() => setShowUserModal(true)}>+ Thêm người dùng</button></div>
-        <div className="table-wrapper"><table className="table"><thead><tr><th>Tên</th><th>Email</th><th>Vai trò</th><th>Phòng ban</th><th /></tr></thead><tbody>{data.users.map((userItem) => <tr key={userItem.id}><td><strong>{userItem.name}</strong></td><td className="table__email">{userItem.email}</td><td><span className="badge badge--info">{data.roleLabels[userItem.role]}</span></td><td>{userItem.department}</td><td><button className="btn btn--ghost btn--sm" onClick={() => showToast('✏️ Sửa user (mock)')}>✏️</button></td></tr>)}</tbody></table></div>
+        <div className="admin-toolbar"><h3 className="admin-toolbar__title">{f(t('learnerPages.adminPages.usersList'), { count: data.users.length })}</h3><button className="btn btn--primary" onClick={() => setShowUserModal(true)}>+ {t('learnerPages.adminPages.addUserBtn')}</button></div>
+        <div className="table-wrapper"><table className="table"><thead><tr><th>{t('learnerPages.adminPages.fullName')}</th><th>{t('learnerPages.adminPages.email')}</th><th>{t('learnerPages.adminPages.roleLabel')}</th><th>{t('learnerPages.adminPages.department')}</th><th /></tr></thead><tbody>{data.users.map((userItem) => <tr key={userItem.id}><td><strong>{userItem.name}</strong></td><td className="table__email">{userItem.email}</td><td><span className="badge badge--info">{t(ROLES.find((r) => r.value === userItem.role)?.labelKey || '') || data.roleLabels[userItem.role]}</span></td><td>{userItem.department}</td><td><button className="btn btn--ghost btn--sm" onClick={() => showToast(`✏️ ${t('learnerPages.adminPages.editUserMock')}`)}>✏️</button></td></tr>)}</tbody></table></div>
       </div>}
 
       {tab === 'courses' && (
@@ -367,24 +396,24 @@ export default function AdminDashboard() {
       {tab === 'distribution' && (
         <div>
           <div className="card" style={{ marginBottom: 16 }}>
-            <h3 className="card__title" style={{ marginBottom: 12 }}>Phân phối khoá học</h3>
+            <h3 className="card__title" style={{ marginBottom: 12 }}>{t('learnerPages.adminPages.distributionTitle')}</h3>
             <div className="admin-form__grid">
               <div className="input-group">
-                <label className="input-label">Khoá học</label>
+                <label className="input-label">{t('learnerPages.adminPages.tabsCourses')}</label>
                 <select className="input" value={assignmentForm.courseId} onChange={(event) => setAssignmentForm((prev) => ({ ...prev, courseId: event.target.value }))}>
                   {data.courses.map((course) => <option key={course.id} value={course.id}>{course.title}</option>)}
                 </select>
               </div>
               <div className="input-group">
-                <label className="input-label">Kiểu phân phối</label>
+                <label className="input-label">{t('learnerPages.adminPages.distributionType')}</label>
                 <select className="input" value={assignmentForm.scope} onChange={(event) => setAssignmentForm((prev) => ({ ...prev, scope: event.target.value }))}>
-                  <option value="user">Theo học viên</option>
-                  <option value="department">Theo phòng ban</option>
+                  <option value="user">{t('learnerPages.adminPages.byLearner')}</option>
+                  <option value="department">{t('learnerPages.adminPages.byDepartment')}</option>
                 </select>
               </div>
               {assignmentForm.scope === 'user' ? (
                 <div className="input-group">
-                  <label className="input-label">Học viên</label>
+                  <label className="input-label">{t('learnerPages.adminPages.learner')}</label>
                   <select className="input" value={assignmentForm.userId} onChange={(event) => setAssignmentForm((prev) => ({ ...prev, userId: event.target.value }))}>
                     {data.users.filter((item) => item.role === 'learner').map((item) => (
                       <option key={item.id} value={item.id}>{item.name} - {item.department}</option>
@@ -393,7 +422,7 @@ export default function AdminDashboard() {
                 </div>
               ) : (
                 <div className="input-group">
-                  <label className="input-label">Phòng ban</label>
+                  <label className="input-label">{t('learnerPages.adminPages.department')}</label>
                   <select className="input" value={assignmentForm.department} onChange={(event) => setAssignmentForm((prev) => ({ ...prev, department: event.target.value }))}>
                     {[...new Set(data.users.filter((item) => item.role === 'learner').map((item) => item.department).filter(Boolean))].map((department) => (
                       <option key={department} value={department}>{department}</option>
@@ -402,26 +431,26 @@ export default function AdminDashboard() {
                 </div>
               )}
               <div className="input-group">
-                <label className="input-label">Hạn hoàn thành</label>
+                <label className="input-label">{t('learnerPages.adminPages.dueDate')}</label>
                 <input className="input" type="date" value={assignmentForm.dueDate} onChange={(event) => setAssignmentForm((prev) => ({ ...prev, dueDate: event.target.value }))} />
               </div>
             </div>
             <label style={{ display: 'inline-flex', alignItems: 'center', gap: 8, marginTop: 8, marginBottom: 12 }}>
               <input type="checkbox" checked={assignmentForm.required} onChange={(event) => setAssignmentForm((prev) => ({ ...prev, required: event.target.checked }))} />
-              Bắt buộc hoàn thành
+              {t('learnerPages.adminPages.requiredComplete')}
             </label>
             <div>
-              <button className="btn btn--primary" onClick={handleAssignCourse}>📤 Phân phối</button>
+              <button className="btn btn--primary" onClick={handleAssignCourse}>📤 {t('learnerPages.adminPages.distribute')}</button>
             </div>
           </div>
 
           <div className="card">
-            <h3 className="card__title" style={{ marginBottom: 12 }}>Lịch sử phân phối ({(data.assignments || []).length})</h3>
+            <h3 className="card__title" style={{ marginBottom: 12 }}>{f(t('learnerPages.adminPages.distributionHistory'), { count: (data.assignments || []).length })}</h3>
             {(data.assignments || []).slice(0, 20).map((assignment) => (
               <div key={assignment.id} style={{ padding: '10px 0', borderBottom: '1px solid var(--color-border)' }}>
                 <div style={{ fontWeight: 700 }}>{assignment.courseName}</div>
                 <div style={{ fontSize: 13, color: 'var(--color-text-muted)' }}>
-                  {assignment.userName} · Hạn: {assignment.dueDate || 'Không hạn'} · {assignment.required ? 'Bắt buộc' : 'Tự chọn'}
+                  {assignment.userName} · {t('learnerPages.adminPages.dueDate')}: {assignment.dueDate || t('learnerPages.adminPages.noDeadline')} · {assignment.required ? t('learnerPages.adminPages.requiredComplete') : t('learnerPages.adminPages.optional')}
                 </div>
               </div>
             ))}
@@ -432,8 +461,8 @@ export default function AdminDashboard() {
       {tab === 'tenants' && (
         <div>
           <div className="admin-toolbar">
-            <h3 className="admin-toolbar__title">Quản lý tenant ({data.tenants.length})</h3>
-            <button className="btn btn--primary" onClick={() => { setEditingTenant(null); setShowTenantModal(true); }}>+ Tạo tenant</button>
+            <h3 className="admin-toolbar__title">{f(t('learnerPages.adminPages.tenantMgmt'), { count: data.tenants.length })}</h3>
+            <button className="btn btn--primary" onClick={() => { setEditingTenant(null); setShowTenantModal(true); }}>+ {t('learnerPages.adminPages.createTenantBtn')}</button>
           </div>
           <div className="grid-2">
             {data.tenants.map((tenant) => (
@@ -444,7 +473,9 @@ export default function AdminDashboard() {
                     <div style={{ fontWeight: 700 }}>{tenant.name}</div>
                     <div style={{ fontSize: 12, color: 'var(--color-text-muted)' }}>{tenant.domain}</div>
                   </div>
-                  <span className={`badge ${tenant.status === 'active' ? 'badge--success' : (tenant.status === 'draft' ? 'badge--warning' : 'badge--neutral')}`}>{tenant.status}</span>
+                  <span className={`badge ${tenant.status === 'active' ? 'badge--success' : (tenant.status === 'draft' ? 'badge--warning' : 'badge--neutral')}`}>
+                    {tenant.status === 'active' ? t('learnerPages.adminPages.statusActive') : tenant.status === 'draft' ? t('learnerPages.adminPages.statusDraft') : t('learnerPages.adminPages.statusArchived')}
+                  </span>
                 </div>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0,1fr))', gap: 8, marginBottom: 10 }}>
                   {[tenant.theme?.primaryColor, tenant.theme?.secondaryColor, tenant.theme?.backgroundColor, tenant.theme?.textColor].map((color, idx) => (
@@ -452,9 +483,9 @@ export default function AdminDashboard() {
                   ))}
                 </div>
                 <div style={{ fontSize: 12, color: 'var(--color-text-muted)', marginBottom: 10 }}>
-                  Font: {tenant.typography?.fontFamily} · Heading: {tenant.typography?.headingStyle} · Body: {tenant.typography?.bodyStyle}
+                  {t('learnerPages.adminPages.typographyFontFamily')}: {tenant.typography?.fontFamily} · {t('learnerPages.adminPages.typographyHeading')}: {tenant.typography?.headingStyle} · {t('learnerPages.adminPages.typographyBody')}: {tenant.typography?.bodyStyle}
                 </div>
-                <button className="btn btn--secondary btn--sm" onClick={() => { setEditingTenant(tenant); setShowTenantModal(true); }}>✏️ Chỉnh sửa</button>
+                <button className="btn btn--secondary btn--sm" onClick={() => { setEditingTenant(tenant); setShowTenantModal(true); }}>✏️ {t('learnerPages.adminPages.editTenant')}</button>
               </div>
             ))}
           </div>
@@ -462,15 +493,15 @@ export default function AdminDashboard() {
       )}
 
       {tab === 'reports' && <div>
-        <div className="card" style={{ marginBottom: 16 }}><h3 className="card__title">Tiến độ khoá học</h3>{data.courseProgressReport.map((course) => { const percent = course.enrolled ? Math.round((course.completed / course.enrolled) * 100) : 0; return <div key={course.courseId} className="chart-bar-row"><div className="chart-bar-label">{course.courseName}</div><div className="chart-bar-track"><div className="chart-bar-fill progress-bar__fill--success" style={{ width: `${percent}%` }} /></div><div className="chart-bar-value">{percent}%</div></div>; })}</div>
-        <div className="card" style={{ marginBottom: 16 }}><h3 className="card__title">Kết quả Quiz</h3>{data.quizResults.map((quiz) => <div key={quiz.quizId} className="chart-bar-row"><div className="chart-bar-label">{quiz.quizName}</div><div className="chart-bar-track"><div className="chart-bar-fill progress-bar__fill--success" style={{ width: `${quiz.passRate}%` }} /></div><div className="chart-bar-value">{quiz.passRate}%</div></div>)}</div>
+        <div className="card" style={{ marginBottom: 16 }}><h3 className="card__title">{t('learnerPages.adminPages.reportsCourseProgress')}</h3>{data.courseProgressReport.map((course) => { const percent = course.enrolled ? Math.round((course.completed / course.enrolled) * 100) : 0; return <div key={course.courseId} className="chart-bar-row"><div className="chart-bar-label">{course.courseName}</div><div className="chart-bar-track"><div className="chart-bar-fill progress-bar__fill--success" style={{ width: `${percent}%` }} /></div><div className="chart-bar-value">{percent}%</div></div>; })}</div>
+        <div className="card" style={{ marginBottom: 16 }}><h3 className="card__title">{t('learnerPages.adminPages.reportsQuizResult')}</h3>{data.quizResults.map((quiz) => <div key={quiz.quizId} className="chart-bar-row"><div className="chart-bar-label">{quiz.quizName}</div><div className="chart-bar-track"><div className="chart-bar-fill progress-bar__fill--success" style={{ width: `${quiz.passRate}%` }} /></div><div className="chart-bar-value">{quiz.passRate}%</div></div>)}</div>
       </div>}
 
-      {tab === 'certificates' && <div className="table-wrapper"><table className="table"><thead><tr><th>Học viên</th><th>Khoá học</th><th>Ngày</th><th>Điểm</th><th>Mã</th></tr></thead><tbody><tr><td>Nguyễn Văn An</td><td>An toàn thông tin</td><td>10/05/2026</td><td><span className="badge badge--success">88</span></td><td>SL-CERT-0001</td></tr><tr><td>Vũ Minh Tuấn</td><td>Kỹ năng giao tiếp</td><td>25/04/2026</td><td><span className="badge badge--success">92</span></td><td>SL-CERT-0002</td></tr></tbody></table></div>}
+      {tab === 'certificates' && <div className="table-wrapper"><table className="table"><thead><tr><th>{t('learnerPages.adminPages.certLearner')}</th><th>{t('learnerPages.adminPages.certCourse')}</th><th>{t('learnerPages.adminPages.certDate')}</th><th>{t('learnerPages.adminPages.certScore')}</th><th>{t('learnerPages.adminPages.certCode')}</th></tr></thead><tbody><tr><td>Nguyễn Văn An</td><td>An toàn thông tin</td><td>10/05/2026</td><td><span className="badge badge--success">88</span></td><td>SL-CERT-0001</td></tr><tr><td>Vũ Minh Tuấn</td><td>Kỹ năng giao tiếp</td><td>25/04/2026</td><td><span className="badge badge--success">92</span></td><td>SL-CERT-0002</td></tr></tbody></table></div>}
 
-      {tab === 'audit' && <div className="table-wrapper"><table className="table"><thead><tr><th>Thời gian</th><th>Người dùng</th><th>Hành động</th><th>Đối tượng</th></tr></thead><tbody>{data.auditLogs.map((log) => <tr key={log.id}><td className="table__date">{new Date(log.timestamp).toLocaleString('vi-VN')}</td><td>{log.userName}</td><td>{log.action}</td><td className="table__email">{log.target}</td></tr>)}</tbody></table></div>}
+      {tab === 'audit' && <div className="table-wrapper"><table className="table"><thead><tr><th>{t('learnerPages.adminPages.auditTime')}</th><th>{t('learnerPages.adminPages.auditUser')}</th><th>{t('learnerPages.adminPages.auditAction')}</th><th>{t('learnerPages.adminPages.auditTarget')}</th></tr></thead><tbody>{data.auditLogs.map((log) => <tr key={log.id}><td className="table__date">{new Date(log.timestamp).toLocaleString(locale === 'en' ? 'en-US' : 'vi-VN')}</td><td>{log.userName}</td><td>{log.action}</td><td className="table__email">{log.target}</td></tr>)}</tbody></table></div>}
 
-      {tab === 'settings' && <div><div className="card"><h4 className="card__title">🔧 Cấu hình chung</h4><button className="btn btn--primary btn--full" onClick={() => showToast('✅ Đã lưu (mock)')}>💾 Lưu</button></div></div>}
+      {tab === 'settings' && <div><div className="card"><h4 className="card__title">🔧 {t('learnerPages.adminPages.settingsGeneral')}</h4><button className="btn btn--primary btn--full" onClick={() => showToast(`✅ ${t('learnerPages.adminPages.savedMock')}`)}>💾 {t('learnerPages.adminPages.save')}</button></div></div>}
 
       <Modal open={showUserModal} onClose={() => setShowUserModal(false)}>
         <AddUserForm onClose={() => setShowUserModal(false)} onSubmit={handleCreateUser} />

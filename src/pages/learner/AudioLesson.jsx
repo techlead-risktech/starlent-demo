@@ -8,6 +8,7 @@ import { useLessonDirty } from '../../hooks/useLessonGuard.jsx';
 import LearnerLayout from '../../components/layout/LearnerLayout.jsx';
 import LeaveConfirmModal from '../../components/common/LeaveConfirmModal.jsx';
 import Modal from '../../components/common/Modal.jsx';
+import { useI18n } from '../../i18n/index.jsx';
 
 function fmt(seconds) {
   const clamped = Math.max(0, Math.floor(Number(seconds || 0)));
@@ -38,6 +39,7 @@ export default function AudioLesson() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const { toast, showToast } = useToast();
+  const { t } = useI18n();
 
   const itemId = searchParams.get('itemId');
   const moduleId = searchParams.get('moduleId');
@@ -145,7 +147,7 @@ export default function AudioLesson() {
     }
     setDone(true);
     setPlaying(false);
-    showToast(`Hoàn thành! +${earnedXp} điểm`);
+    showToast(t('learnerPages.audio.completedToast').replace('{xp}', String(earnedXp)));
   };
 
   const submitCheckpoint = (selectedIndex) => {
@@ -173,8 +175,8 @@ export default function AudioLesson() {
 
   if (!content) {
     return (
-      <LearnerLayout topBar={<div className="page__header"><div className="page__title">Đang tải...</div></div>}>
-        <div className="empty-state">Đang tải...</div>
+      <LearnerLayout topBar={<div className="page__header"><div className="page__title">{t('common.loading')}</div></div>}>
+        <div className="empty-state">{t('common.loading')}</div>
       </LearnerLayout>
     );
   }
@@ -188,7 +190,7 @@ export default function AudioLesson() {
   const canMarkDone = listenedPercent >= requiredPercent && checkpointSatisfied;
 
   return (
-    <LearnerLayout topBar={<div className="page__header"><button className="btn btn--ghost btn--sm" onClick={handleBack} style={{ marginBottom: 8 }}>← Quay lại</button><div className="page__title">{content.title}</div></div>}>
+    <LearnerLayout topBar={<div className="page__header"><button className="btn btn--ghost btn--sm" onClick={handleBack} style={{ marginBottom: 8 }}>← {t('learnerPages.common.back')}</button><div className="page__title">{content.title}</div></div>}>
       <div style={{ padding: 16 }}>
         <div style={{ background: 'linear-gradient(135deg,#FFF0EB,#FFF7ED)', borderRadius: 'var(--radius-lg)', padding: 36, textAlign: 'center', marginBottom: 16 }}>
           <div style={{ fontSize: 56, marginBottom: 8 }}>🎧</div>
@@ -215,7 +217,7 @@ export default function AudioLesson() {
         </div>
 
         <div className="card" style={{ marginBottom: 16 }}>
-          <h4 style={{ fontSize: 15, fontWeight: 700, marginBottom: 8 }}>📝 Lời thoại</h4>
+          <h4 style={{ fontSize: 15, fontWeight: 700, marginBottom: 8 }}>📝 {t('learnerPages.audio.transcriptTitle')}</h4>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
             {transcriptSegments.map((segment) => {
               const active = activeSegmentId === segment.id;
@@ -249,9 +251,9 @@ export default function AudioLesson() {
 
         {checkpointTotal > 0 && (
           <div className="card" style={{ marginBottom: 16, background: '#F8FAFC' }}>
-            <h4 style={{ fontSize: 14, fontWeight: 700, marginBottom: 8 }}>✅ Checkpoint</h4>
+            <h4 style={{ fontSize: 14, fontWeight: 700, marginBottom: 8 }}>✅ {t('learnerPages.audio.checkpointTitle')}</h4>
             <div style={{ fontSize: 13, color: 'var(--color-text-secondary)' }}>
-              Đã đúng {checkpointPassedCount}/{checkpointTotal} checkpoint (đã trả lời {checkpointAnsweredCount}/{checkpointTotal}, mốc 10s, 15s).
+              {t('learnerPages.audio.checkpointSummary').replace('{passed}', String(checkpointPassedCount)).replace('{total}', String(checkpointTotal)).replace('{answered}', String(checkpointAnsweredCount))}
             </div>
           </div>
         )}
@@ -263,13 +265,13 @@ export default function AudioLesson() {
             disabled={!canMarkDone}
             style={{ whiteSpace: 'normal', textAlign: 'center', lineHeight: 1.3, paddingLeft: 12, paddingRight: 12, wordBreak: 'break-word' }}
           >
-            Đánh dấu hoàn thành {!canMarkDone ? `(nghe ${requiredPercent}% + trả lời checkpoint)` : ''}
+            {t('learnerPages.audio.markDone')} {!canMarkDone ? t('learnerPages.audio.markDoneRule').replace('{percent}', String(requiredPercent)) : ''}
           </button>
         ) : (
           <div style={{ textAlign: 'center', padding: 20 }}>
             <div style={{ fontSize: 36 }}>🎉</div>
-            <p style={{ fontSize: 16, fontWeight: 600 }}>Đã hoàn thành!</p>
-            <button className="btn btn--primary" style={{ marginTop: 12 }} onClick={handleBack}>Quay lại</button>
+            <p style={{ fontSize: 16, fontWeight: 600 }}>{t('learnerPages.audio.lessonDone')}</p>
+            <button className="btn btn--primary" style={{ marginTop: 12 }} onClick={handleBack}>{t('learnerPages.common.back')}</button>
           </div>
         )}
       </div>
@@ -277,7 +279,7 @@ export default function AudioLesson() {
       <Modal open={!!activeCheckpoint} onClose={() => {}}>
         {activeCheckpoint && (
           <div style={{ width: 'min(92vw, 520px)', maxWidth: '100%' }}>
-            <h3 style={{ marginBottom: 8 }}>Checkpoint tại {fmt(activeCheckpoint.atSec)}</h3>
+            <h3 style={{ marginBottom: 8 }}>{t('learnerPages.audio.checkpointAt').replace('{time}', fmt(activeCheckpoint.atSec))}</h3>
             <p style={{ marginBottom: 12, fontWeight: 600 }}>{activeCheckpoint.question}</p>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
               {activeCheckpoint.options.map((option, idx) => (
@@ -321,11 +323,11 @@ export default function AudioLesson() {
               <div style={{ marginTop: 12 }}>
                 <div style={{ fontSize: 13, marginBottom: 10, color: checkpointResult.isCorrect ? '#166534' : '#B91C1C' }}>
                   {checkpointResult.isCorrect
-                    ? '✅ Chính xác'
-                    : `❌ Chưa đúng. Đáp án đúng: ${checkpointResult.correctLabel}`}
+                    ? `✅ ${t('learnerPages.audio.correct')}`
+                    : `❌ ${t('learnerPages.audio.wrongWithAnswer').replace('{answer}', checkpointResult.correctLabel)}`}
                 </div>
                 <button className="btn btn--primary btn--full" onClick={continueCheckpoint}>
-                  Tiếp tục
+                  {t('learnerPages.audio.continue')}
                 </button>
               </div>
             )}

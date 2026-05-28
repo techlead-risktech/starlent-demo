@@ -7,6 +7,7 @@ import { useToast, usePreventLeave } from '../../hooks/useToast.js';
 import { useLessonDirty } from '../../hooks/useLessonGuard.jsx';
 import LearnerLayout from '../../components/layout/LearnerLayout.jsx';
 import LeaveConfirmModal from '../../components/common/LeaveConfirmModal.jsx';
+import { useI18n } from '../../i18n/index.jsx';
 
 function normalizeVietnameseText(value) {
   const text = String(value || '');
@@ -24,6 +25,7 @@ export default function RoleplayScreen() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const { toast, showToast } = useToast();
+  const { t } = useI18n();
 
   const itemId = searchParams.get('itemId');
   const moduleId = searchParams.get('moduleId');
@@ -71,37 +73,37 @@ export default function RoleplayScreen() {
       completeItem(resolvedItemId, 20);
     }
     setSubmitted(true);
-    showToast('✅ Đã gửi! +20 điểm');
+    showToast(`✅ ${t('learnerPages.roleplay.submitToast').replace('{xp}', '20')}`);
   };
 
-  if (!content) return <LearnerLayout topBar={<div className="page__header"><div className="page__title">Đang tải...</div></div>}><div className="empty-state">Đang tải...</div></LearnerLayout>;
+  if (!content) return <LearnerLayout topBar={<div className="page__header"><div className="page__title">{t('common.loading')}</div></div>}><div className="empty-state">{t('common.loading')}</div></LearnerLayout>;
 
   return (
-    <LearnerLayout topBar={<div className="page__header"><button className="btn btn--ghost btn--sm" onClick={handleBack} style={{ marginBottom: 8 }}>← Quay lại</button><div className="page__title">{normalizeVietnameseText(content.title)}</div></div>}>
+    <LearnerLayout topBar={<div className="page__header"><button className="btn btn--ghost btn--sm" onClick={handleBack} style={{ marginBottom: 8 }}>← {t('learnerPages.common.back')}</button><div className="page__title">{normalizeVietnameseText(content.title)}</div></div>}>
       <div style={{ padding: 16 }}>
-        <div className="card" style={{ marginBottom: 16, background: '#FFF7ED', borderColor: '#FCD34D' }}><h4 style={{ fontSize: 15, fontWeight: 700, marginBottom: 8, color: '#92400E' }}>📋 Tình huống</h4><p style={{ fontSize: 14, color: 'var(--color-text-secondary)', lineHeight: 1.6 }}>{normalizeVietnameseText(content.scenario)}</p></div>
-        <div className="card" style={{ marginBottom: 16 }}><h4 style={{ fontSize: 15, fontWeight: 700, marginBottom: 8 }}>💡 Gợi ý</h4><p style={{ fontSize: 13, color: 'var(--color-text-secondary)', lineHeight: 1.6 }}>{normalizeVietnameseText(content.suggestedResponse)}</p>
-          {content.tips && <div style={{ marginTop: 12 }}><p style={{ fontSize: 12, fontWeight: 600, color: 'var(--color-text-muted)', marginBottom: 4 }}>Mẹo:</p>{content.tips.map((tip, i) => <div key={i} style={{ fontSize: 12, color: 'var(--color-text-muted)', padding: '2px 0' }}>• {normalizeVietnameseText(tip)}</div>)}</div>}
+        <div className="card" style={{ marginBottom: 16, background: '#FFF7ED', borderColor: '#FCD34D' }}><h4 style={{ fontSize: 15, fontWeight: 700, marginBottom: 8, color: '#92400E' }}>📋 {t('learnerPages.roleplay.scenario')}</h4><p style={{ fontSize: 14, color: 'var(--color-text-secondary)', lineHeight: 1.6 }}>{normalizeVietnameseText(content.scenario)}</p></div>
+        <div className="card" style={{ marginBottom: 16 }}><h4 style={{ fontSize: 15, fontWeight: 700, marginBottom: 8 }}>💡 {t('learnerPages.roleplay.hint')}</h4><p style={{ fontSize: 13, color: 'var(--color-text-secondary)', lineHeight: 1.6 }}>{normalizeVietnameseText(content.suggestedResponse)}</p>
+          {content.tips && <div style={{ marginTop: 12 }}><p style={{ fontSize: 12, fontWeight: 600, color: 'var(--color-text-muted)', marginBottom: 4 }}>{t('learnerPages.roleplay.tips')}</p>{content.tips.map((tip, i) => <div key={i} style={{ fontSize: 12, color: 'var(--color-text-muted)', padding: '2px 0' }}>• {normalizeVietnameseText(tip)}</div>)}</div>}
         </div>
         <div style={{ textAlign: 'center', marginBottom: 20 }}>
-          {!submitted ? (
+              {recording ? (
             <>
               {recording ? (
                 <div>
                   <div style={{ width: 80, height: 80, borderRadius: '50%', background: 'var(--color-danger)', margin: '0 auto 12px', display: 'flex', alignItems: 'center', justifyContent: 'center', animation: 'pulse 1.5s infinite' }}><span style={{ fontSize: 32 }}>🎤</span></div>
-                  <p style={{ fontSize: 14, color: 'var(--color-danger)', fontWeight: 600 }}>Đang ghi âm... {recTime}s</p>
-                  <button className="btn btn--secondary" style={{ marginTop: 8 }} onClick={stop}>⏹️ Dừng</button>
+                  <p style={{ fontSize: 14, color: 'var(--color-danger)', fontWeight: 600 }}>{t('learnerPages.roleplay.recording').replace('{seconds}', String(recTime))}</p>
+                  <button className="btn btn--secondary" style={{ marginTop: 8 }} onClick={stop}>⏹️ {t('learnerPages.roleplay.stop')}</button>
                 </div>
               ) : (
                 <div>
                   <button className="btn" style={{ width: 80, height: 80, borderRadius: '50%', background: recorded ? 'var(--color-success)' : 'var(--color-primary)', color: '#fff', fontSize: 32, margin: '0 auto 12px' }} onClick={recorded ? () => { setRecorded(false); setRecTime(0); } : start}>{recorded ? '🔄' : '🎤'}</button>
-                  <p style={{ fontSize: 14, color: 'var(--color-text-muted)' }}>{recorded ? `Đã ghi ${recTime}s - chạm để thu lại` : 'Chạm để bắt đầu ghi âm'}</p>
+                  <p style={{ fontSize: 14, color: 'var(--color-text-muted)' }}>{recorded ? t('learnerPages.roleplay.recordedTap').replace('{seconds}', String(recTime)) : t('learnerPages.roleplay.tapToStart')}</p>
                 </div>
               )}
-              {recorded && <button className="btn btn--primary btn--lg btn--full" style={{ marginTop: 16 }} onClick={submit}>📤 Gửi để giảng viên đánh giá</button>}
+              {recorded && <button className="btn btn--primary btn--lg btn--full" style={{ marginTop: 16 }} onClick={submit}>📤 {t('learnerPages.roleplay.submit')}</button>}
             </>
           ) : (
-            <div style={{ textAlign: 'center', padding: 20 }}><div style={{ fontSize: 64 }}>🎉</div><h2 style={{ fontSize: 24, fontWeight: 800, margin: '8px 0' }}>Đã gửi!</h2><p style={{ fontSize: 14, color: 'var(--color-text-secondary)' }}>Giảng viên sẽ đánh giá và phản hồi</p><button className="btn btn--primary btn--lg btn--full" style={{ marginTop: 16 }} onClick={handleBack}>Quay lại</button></div>
+            <div style={{ textAlign: 'center', padding: 20 }}><div style={{ fontSize: 64 }}>🎉</div><h2 style={{ fontSize: 24, fontWeight: 800, margin: '8px 0' }}>{t('learnerPages.roleplay.submitted')}</h2><p style={{ fontSize: 14, color: 'var(--color-text-secondary)' }}>{t('learnerPages.roleplay.submittedDesc')}</p><button className="btn btn--primary btn--lg btn--full" style={{ marginTop: 16 }} onClick={handleBack}>{t('learnerPages.common.back')}</button></div>
           )}
         </div>
       </div>
